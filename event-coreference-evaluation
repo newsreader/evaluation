@@ -6,12 +6,10 @@ Package of functions for evaluating event coreference:
 - function to reduce the key file to sentences with annotations
 - function to reduce the response file to the sentences of the key file
 - function to generate the scripts to compare key files with response files in CoNLL coreference format using CorScorer.
-   Emili Sapena, Universitat Politècnica de Catalunya, http://www.lsi.upc.edu/~esapena, esapena <at> lsi.upc.edu
-   Sameer Pradhan, sameer.pradhan <at> childrens.harvard.edu
-   Sebastian Martschat, sebastian.martschat <at> h-its.org
-   Xiaoqiang Luo, xql <at> google.com
+CorScorer can be downloaded from: https://code.google.com/p/reference-coreference-scorers/
 
-The source code can be check out from:
+The source code for the NewsReader event-coreference can be check out from:
 
 https://github.com/cltl/coreference-evaluation
 
+The package include the WikiNews eveluation data for coreference.

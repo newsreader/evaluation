@@ -70,3 +70,13 @@ In the results folder the wikinews data and evaluation is provided for the inner
 ../conlleval.txt < conlleval-3-class-best-outer.txt
 ../conlleval.txt -r < conlleval-3-class-best-outer.txt
 ````
+
+### Contact information
+
+````shell
+Rodrigo Agerri
+IXA NLP Group
+University of the Basque Country (UPV/EHU)
+E-20018 Donostia-San Sebastián
+rodrigo.agerri@ehu.es
+````

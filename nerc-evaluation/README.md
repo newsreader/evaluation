@@ -11,6 +11,8 @@ In this folder you can find the scripts necessary to evaluate a NERC tagger
 system's output, provided you have the gold standard or reference corpus in
 CoNLL 2002 format and the model and tagger to be evaluated.
 
+In the results folder the wikinews data and evaluation is also provided.
+
 ### STEPS
 
 * If you only have the gold standard dataset in CoNLL 2002 format follow all the steps.

@@ -7,60 +7,50 @@ CoNLL 2011/2012 format.
 
 ### STEPS
 
-#### 1. **Extract raw test data** from gold standard by executing 
+#### 1. **Convert CAT to CoNLL format** 
 
 ````shell
-./01-get-text-from-gold-conll.sh wiki-news-gold.conll02 > wikinews-test-raw.txt
+./01-convert-gold-cat-to-conll.sh
 ````
 
-#### 2. **Annotate raw test data**
-
-This step annotates the raw gold standard corpus with a specific model:
+#### 2. **Remove sentences without annotation**
 
 ````shell
-./02-annotate-raw-test-with-ixa-pipe-nerc.sh wikinews-test-raw.txt nerc-model.bin > test-nerc-model.txt
+./02-reduce-gold-to-annotated-data.sh
 ````
-**NOTE** This step depends on the model and tagger you used. The script in this step is just an illustration of what is required, but if you do not use the [ixa-pipe-nerc](http://ixa2.si.ehu.es/ixa-pipes) tagger you would need to do the annotation differently.
-
-#### 3. **Prepare data for conlleval script** 
-
-This step prepares the file required to use the conlleval script for evaluation:
+#### 3. **Obtain plain text from gold for annotation** 
 
 ````shell
-./03-setup-test-for-conll02-script.sh test-nerc-model.txt wiki-news-gold.conll02 > conlleval-test-nerc-model.txt
+./03-get-raw-text-from-gold.sh gold-standard/corpus_apple/
 ````
 
-#### 4. **Run conlleval script**:
+#### 4. **Annotate gold raw plain text with Corefgraph**:
 
 The official conlleval script is used to obtain the results of the nerc tagger/model used. For phrase based F1, run the script like this: 
 
 ````shell
-./conlleval < conlleval-test-nerc-model.txt
+./04-annotate-raw-text-corefgraph.sh ~/javacode/newsreader/coreference-conll-evaluation/corefgraph-raw-wikinews/corpus_apple/ ~/javacode/ixa-pipe-nerc/en-91-14-conll03.bin
 ````
-
-If you use the -r option the token-based F1 is provided:
+#### 5. **Convert Coreference prediction from NAF to CoNLL**:
 
 ````shell
-./conlleval -r < conlleval-test-nerc-model.txt
+./05-convert-naf-to-conll.sh
 ````
 
-### Wikinews Evaluation
-
-In the results folder the wikinews data and evaluation is provided for the inner and outer named entities using a NERC ixa-pipe-nerc model which obtains 90.88 F1 on the testb CoNLL 2003 dataset. Run the conlleval script as specified in step 4. to obtain the phrase- and token-based evaluation. 
+#### 6. **Prepare corpora for CoNLL script**:
 
 ````shell
-../conlleval.txt < conlleval-3-class-best-inner.txt
-../conlleval.txt -r < conlleval-3-class-best-inner.txt
-../conlleval.txt < conlleval-3-class-best-outer.txt
-../conlleval.txt -r < conlleval-3-class-best-outer.txt
+./06-prepare-corpus-for-conll-script.sh
 ````
 
-### Contact information
+#### 7. **Run conll script**:
 
 ````shell
-Rodrigo Agerri
-IXA NLP Group
-University of the Basque Country (UPV/EHU)
-E-20018 Donostia-San Sebastián
-rodrigo.agerri@ehu.es
+./07-run-conll-script.sh
+````
+
+#### 8. **Print out the results**:
+
+````shell
+./08-collect-results.sh
 ````

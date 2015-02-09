@@ -69,7 +69,7 @@ If you use the -r option the token-based F1 is provided:
 
 ### Wikinews corpora and ixa-pipe-nerc model
 
-The results reported in the D3.2.2 Newsreader deliverable are obtained with this model:
+The results reported in the D3.3.2 Newsreader deliverable are obtained with this model:
 
 [en-clusters-3class-muc7-conll03-ontonotes-4.0.bin](http://ixa2.si.ehu.es/ixa-pipes/models/en-clusters-3class-muc7-conll03-ontonotes-4.0.bin)
 

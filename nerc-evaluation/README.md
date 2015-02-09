@@ -9,7 +9,8 @@ pipeline.
 
 In this folder you can find the scripts necessary to evaluate a NERC tagger
 system's output, provided you have the gold standard or reference corpus in
-CoNLL 2003 format and the model and tagger to be evaluated. 
+CoNLL 2003 format and the model and tagger to be evaluated. There are also some
+simple scripts to convert from Stanford NER tsv format to CoNLL 2003.
 
 **See also last section to obtain the results of the English tagger of the Newsreader pipeline evaluated on the Wikinews corpus**.
 
@@ -23,27 +24,33 @@ CoNLL 2003 format and the model and tagger to be evaluated.
 
     ...and then go directly to **step 3.**
 
-#### 1. **Extract raw test data** from gold standard by executing 
+#### 1. **Get first 5 sentences** from each document in the gold standard
 
 ````shell
-./01-get-text-from-gold-conll.sh wiki-news-gold.conll03 > wikinews-test-raw.txt
+./01-get-first-5-sentences-from-gold.sh corpus_airbus/
+cat corpus_airbus/*.five > corpus_airbus-gold.conll
+````
+#### 2. **Extract raw test data** from gold standard by executing 
+
+````shell
+./02-get-text-from-gold-conll.sh wiki-news-gold.conll > wikinews-test-raw.txt
 ````
 
-#### 2. **Annotate raw test data**
+#### 3. **Annotate raw test data**
 
 This step annotates the raw gold standard corpus with a specific model:
 
 ````shell
-./02-annotate-raw-test-with-ixa-pipe-nerc.sh wikinews-test-raw.txt nerc-model.bin > test-nerc-model.txt
+./02-annotate-raw-test-with-ixa-pipe-nerc.sh wikinews-test-raw.txt nerc-model.bin > test-nerc-model.conll03
 ````
 **NOTE** This step depends on the model and tagger you used. The script in this step is just an illustration of what is required, but if you do not use the [ixa-pipe-nerc](http://ixa2.si.ehu.es/ixa-pipes) tagger you would need to do the annotation differently.
 
-#### 3. **Prepare data for conlleval script** 
+#### 4. **Prepare data for conlleval script** 
 
 This step prepares the file required to use the conlleval script for evaluation:
 
 ````shell
-./03-setup-test-for-conll03-script.sh test-nerc-model.txt wiki-news-gold.conll03 > conlleval-test-nerc-model.txt
+./03-setup-test-for-conll03-script.sh test-nerc-model.conll wiki-news-gold.conll03 > conlleval-test-nerc-model.txt
 ````
 
 #### 4. **Run conlleval script**:
@@ -60,16 +67,15 @@ If you use the -r option the token-based F1 is provided:
 ./conlleval -r < conlleval-test-nerc-model.txt
 ````
 
-### Wikinews Evaluation
+### Wikinews corpora and ixa-pipe-nerc model
 
-In the results folder the wikinews data and evaluation is provided for the inner and outer named entities using a NERC ixa-pipe-nerc model which obtains 90.88 F1 on the testb CoNLL 2003 dataset. Run the conlleval script as specified in step 4. to obtain the phrase- and token-based evaluation. 
+The results reported in the D3.2.2 Newsreader deliverable are obtained with this model:
 
-````shell
-../conlleval.txt < conlleval-3-class-best-inner.txt
-../conlleval.txt -r < conlleval-3-class-best-inner.txt
-../conlleval.txt < conlleval-3-class-best-outer.txt
-../conlleval.txt -r < conlleval-3-class-best-outer.txt
-````
+[en-clusters-3class-muc7-conll03-ontonotes-4.0.bin](http://ixa2.si.ehu.es/ixa-pipes/models/en-clusters-3class-muc7-conll03-ontonotes-4.0.bin)
+
+And here you can find the Wikinews annotated dataset separated at outer and inner mentions:
+
+[Wikinews NERC gold standard](http://ixa2.si.ehu.es/ragerri/NER_CoNLL_gold_standard.tar.gz)
 
 ### Contact information
 

@@ -33,7 +33,7 @@ directory_path = ''
 
 ## paramaters ##
 relaxed_match = True
-evaluation_5_sent = False
+evaluation_5_sent = True
 
 ## global variables for evaluation 
 global_number_files = 0
@@ -44,8 +44,12 @@ global_gold_token = {}
 global_system_token = {}
 global_markable_strict_match = {}
 global_markable_relaxed_match = {} 
+global_markable_relaxed_match_4recall = {} 
+global_markable_relaxed_match_4precision = {} 
 global_att_markable_match = {}
 global_att_markable_relaxed_match = {}
+global_att_markable_relaxed_match_4recall = {}
+global_att_markable_relaxed_match_4precision = {}
 
 global_markable_recall = {}
 global_markable_precision = {}
@@ -53,6 +57,8 @@ global_markable_fmeasure = {}
 
 global_system_relation = {}
 global_gold_relation = {}
+global_system_relation_relaxed_match = {}
+global_gold_relation_relaxed_match = {}
 global_gold_relation_common_markables = {}
 global_system_relation_common_markables = {}
 global_relation_match = {}
@@ -122,8 +128,12 @@ def init_global_variable(file_class_att):
     global global_system_markable
     global global_markable_strict_match
     global global_markable_relaxed_match 
+    global global_markable_relaxed_match_4recall
+    global global_markable_relaxed_match_4precision
     global global_att_markable_match
     global global_att_markable_relaxed_match
+    global global_att_markable_relaxed_match_4recall
+    global global_att_markable_relaxed_match_4precision
     
     read_class_att(file_class_att)
 
@@ -134,18 +144,26 @@ def init_global_variable(file_class_att):
         global_system_token[eltN] = 0
         global_markable_strict_match[eltN] = 0
         global_markable_relaxed_match[eltN] = 0
+        global_markable_relaxed_match_4recall[eltN] = 0
+        global_markable_relaxed_match_4precision[eltN] = 0
         global_att_markable_match[eltN] = {}
         global_att_markable_relaxed_match[eltN] = {}
+        global_att_markable_relaxed_match_4recall[eltN] = {}
+        global_att_markable_relaxed_match_4precision[eltN] = {}
         global_markable_recall[eltN] = 0
         global_markable_precision[eltN] = 0
         global_markable_fmeasure[eltN] = 0
         for att in global_list_markables_att[eltN]:
             global_att_markable_match[eltN][att.lower()] = 0
             global_att_markable_relaxed_match[eltN][att.lower()] = 0
+            global_att_markable_relaxed_match_4recall[eltN][att.lower()] = 0
+            global_att_markable_relaxed_match_4precision[eltN][att.lower()] = 0
 
     for eltN in global_list_relations_one2one_att:
         global_gold_relation[eltN] = 0
         global_system_relation[eltN] = 0
+        global_gold_relation_relaxed_match[eltN] = 0
+        global_system_relation_relaxed_match[eltN] = 0
         global_gold_relation_common_markables[eltN] = 0
         global_system_relation_common_markables[eltN] = 0
         global_relation_match[eltN] = 0
@@ -156,20 +174,23 @@ def init_global_variable(file_class_att):
             global_att_relation_match[eltN][att.lower()] = 0
             global_att_relation_relaxed_match[eltN][att.lower()] = 0
 
-    eltN = "TLINK (strict match)"
-    global_gold_relation[eltN] = 0
-    global_system_relation[eltN] = 0
-    global_gold_relation_common_markables[eltN] = 0
-    global_system_relation_common_markables[eltN] = 0
-    global_relation_match[eltN] = 0
-    global_att_relation_match[eltN] = {}
-    global_relation_relaxed_match[eltN] = 0
-    global_att_relation_relaxed_match[eltN] = {}
-    for att in global_list_relations_one2one_att['TLINK']:
-        global_att_relation_match[eltN][att.lower()] = 0
-        global_att_relation_relaxed_match[eltN][att.lower()] = 0
+    if 'TLINK' in global_list_relations_one2one_att:
+        eltN = "TLINK (strict match)"
+        global_gold_relation[eltN] = 0
+        global_system_relation[eltN] = 0
+        global_gold_relation_relaxed_match[eltN] = 0
+        global_system_relation_relaxed_match[eltN] = 0
+        global_gold_relation_common_markables[eltN] = 0
+        global_system_relation_common_markables[eltN] = 0
+        global_relation_match[eltN] = 0
+        global_att_relation_match[eltN] = {}
+        global_relation_relaxed_match[eltN] = 0
+        global_att_relation_relaxed_match[eltN] = {}
+        for att in global_list_relations_one2one_att['TLINK']:
+            global_att_relation_match[eltN][att.lower()] = 0
+            global_att_relation_relaxed_match[eltN][att.lower()] = 0
   
-
+    
 #init markable id, relation id and token id if labelled xml
 def init_id_elt (type_xml):
     global markable_id
@@ -293,19 +314,34 @@ def get_all_relation_value(element, eltName, objectEval, list_instances):
         r.target = get_relation_elt(elt, 'target')
 
         if len(r.source) > 0 and len(r.target) > 0:
-            duplicate = False
-            for rel_tmp in relationList:
-                if rel_tmp.source == r.source and rel_tmp.target == r.target:
-                    duplicate = True
+            if eltName != "TLINK" or (eltName == "TLINK" and r.att["reltype"] != "IDENTITY"):
+                duplicate = False
+                for rel_tmp in relationList:
+                    if rel_tmp.source == r.source and rel_tmp.target == r.target:
+                        duplicate = True
 
-            if not duplicate:
-                relationList.append(r)
+                if not duplicate:
+                    relationList.append(r)
+                #elif eltName == "TLINK": 
+                #    print "duplicate: "+r.att["reltype"]
+
+        #elif eltName == "TLINK":
+        #    print ">>>>>> "+r.att["reltype"]
         
     #if many-to-one relations are expressed by one-to-one relations, then transform one-to-one to many-to-one
     if eltName in global_list_relations_many2one_att:
         relationList = convert_one2one_relation_in_many2one(relationList)
+
     return relationList
-        
+  
+
+def get_all_relation_value_markable_match(list_rel,correspId):
+    relationListMatch = []
+    for rel in list_rel:
+        if rel.source[0] in correspId and rel.target[0] in correspId:
+            relationListMatch.append(rel)
+    return relationListMatch
+      
     
 def get_relation_elt(element, eltName):
     "build a list of the id of eltName contained in element"
@@ -375,6 +411,12 @@ def get_inverse_array (correspId_array):
         temp.append(pairs[0])
         correspId_inst_inv.append(temp)
     return correspId_inst_inv
+
+def get_inverse_dict (correspId_dict):
+    correspId_inv = {}
+    for key in correspId_dict:
+        correspId_inv[correspId_dict[key]] = key
+    return correspId_inv
 
 
 def get_nb_token(tokens):
@@ -661,6 +703,8 @@ def compute_precision_recall_relation_one2one (gold_relation, sys_relation, corr
 
     global global_system_relation
     global global_gold_relation
+    global global_system_relation_relaxed_match
+    global global_gold_relation_relaxed_match
     global global_relation_match
     global global_att_relation_match
     global global_relation_relaxed_match
@@ -720,6 +764,8 @@ def compute_precision_recall_relation_one2one (gold_relation, sys_relation, corr
                             for objE in objectEval:
                                 if r.att[objE.lower()].upper() == r_sys.att[objE.lower()].upper():
                                     total_att_relation_match[objE.lower()] += 1 #TP att
+                                #else:
+                                #print r.att[objE.lower()].upper()+" - "+r_sys.att[objE.lower()].upper()
 
                         #else test if the source in gold == the target in system and the target in system == the source in gold
                         #in this case the type of the relation has to be reverse (before --> after, ...)
@@ -729,6 +775,8 @@ def compute_precision_recall_relation_one2one (gold_relation, sys_relation, corr
                             for objE in objectEval:
                                 if r.att[objE.lower()].upper() == reverse_relation(r_sys.att[objE.lower()].upper()) or (reverse_relation(r_sys.att[objE.lower()].upper()) == 'NONE' and r.att[objE.lower()].upper() == r_sys.att[objE.lower()].upper()):
                                     total_att_relation_match[objE.lower()] += 1 #TP att
+                                #else:
+                                #    print r.att[objE.lower()].upper()+" - "+r_sys.att[objE.lower()].upper()
 
                     else:
                         if len(r_sys.source) == 1 and len(r_sys.target) == 1 and r_sys.source[0] in idSourceMatchSys and r_sys.target[0] in idTargetMatchSys:
@@ -737,6 +785,8 @@ def compute_precision_recall_relation_one2one (gold_relation, sys_relation, corr
                             for objE in objectEval:
                                 if r.att[objE.lower()].upper() == r_sys.att[objE.lower()].upper():
                                     total_att_relation_match[objE.lower()] += 1 #TP att
+                                #else:
+                                #    print r.att[objE.lower()].upper()+" - "+r_sys.att[objE.lower()].upper()
 
     strict_relation_recall = 0 
     if total_gold_relation != 0: 
@@ -752,6 +802,8 @@ def compute_precision_recall_relation_one2one (gold_relation, sys_relation, corr
     
     if eltName == "TLINK":
         eltName = "TLINK (strict match)"
+    #elif eltName == "TLINK" and type_match == "relaxed":
+    #    eltName = "TLINK (relaxed match)"
 
     if debug >= 2: 
         print '\n',eltName,' PERFORMANCE', '(',type_match,')'
@@ -769,6 +821,9 @@ def compute_precision_recall_relation_one2one (gold_relation, sys_relation, corr
 
     #relaxed match
     if type_match == "relaxed":
+        global_system_relation_relaxed_match[eltName] += total_system_relation
+        global_gold_relation_relaxed_match[eltName] += total_gold_relation
+
         if re.match('TLINK.*',eltName) and "reltype" in total_att_relation_match:
             global_relation_relaxed_match[eltName] += total_att_relation_match['reltype']
             #global_relation_relaxed_match[eltName] += total_relation_match
@@ -800,6 +855,8 @@ def compute_precision_recall(gold_entity, gold_token_entity, system_entity, syst
     global global_gold_markable
     global global_markable_strict_match
     global global_markable_relaxed_match
+    global global_markable_relaxed_match_4recall
+    global global_markable_relaxed_match_4precision
     global global_markable_recall
     global global_markable_precision
     global global_markable_fmeasure
@@ -810,6 +867,7 @@ def compute_precision_recall(gold_entity, gold_token_entity, system_entity, syst
     correspInstId = []
 
     correspEntityIdRM = {} #Relaxed match
+    correspEntityIdRM_sysGold = {} #Relaxed match
 
     pairInstTP = {}
 
@@ -818,6 +876,8 @@ def compute_precision_recall(gold_entity, gold_token_entity, system_entity, syst
     system_event_handled = {} 
 
     total_markable_strict_match = 0
+    total_markable_relaxed_match_4precision = 0
+    total_markable_relaxed_match_4recall = 0
     total_markable_relaxed_match = 0
     total_token_strict_match = 0
     total_token_relaxed_match = 0
@@ -825,10 +885,14 @@ def compute_precision_recall(gold_entity, gold_token_entity, system_entity, syst
 
     total_att_match = {}
     total_att_match_relaxed = {}
+    total_att_match_relaxed_4recall = {}
+    total_att_match_relaxed_4precision = {}
 
     for objE in objectEval:
         total_att_match[objE.lower()] = 0
         total_att_match_relaxed[objE.lower()] = 0
+        total_att_match_relaxed_4recall[objE.lower()] = 0
+        total_att_match_relaxed_4precision[objE.lower()] = 0
 
     total_gold_token = 0
     total_system_token = 0
@@ -872,23 +936,27 @@ def compute_precision_recall(gold_entity, gold_token_entity, system_entity, syst
 
                 #relaxed match
                 total_markable_relaxed_match += 1 #TP
+                total_markable_relaxed_match_4recall += 1 #TP
                 correspEntityIdRM[gold_entity[i].eid] = system_entity[system_token_entity.index(tokList)].eid
 
                 for objE in objectEval:
                     if gold_entity[i].att[objE.lower()].upper() == system_entity[system_token_entity.index(tokList)].att[objE.lower()].upper() :
                         total_att_match[objE.lower()] += 1 #TP att
                         total_att_match_relaxed[objE.lower()] += 1 #TP att
+                        total_att_match_relaxed_4recall[objE.lower()] += 1 #TP att
 
             #relaxed match
             else:
                 for tokListSys in system_token_entity:
                     if relaxed_match(tokList,tokListSys) and not gold_entity[i].eid in correspEntityIdRM:
                         total_markable_relaxed_match += 1 #TP
+                        total_markable_relaxed_match_4recall += 1 #TP
                         correspEntityIdRM[gold_entity[i].eid] = system_entity[system_token_entity.index(tokListSys)].eid
 
                         for objE in objectEval:
                             if gold_entity[i].att[objE.lower()].upper() == system_entity[system_token_entity.index(tokListSys)].att[objE.lower()].upper() :
                                 total_att_match_relaxed[objE.lower()] += 1 #TP att
+                                total_att_match_relaxed_4recall[objE.lower()] += 1 #TP att
 
 
         #Empty tag
@@ -924,7 +992,36 @@ def compute_precision_recall(gold_entity, gold_token_entity, system_entity, syst
                                     total_att_match[objE.lower()] += 1 #TP att
                                     total_att_match_relaxed[objE.lower()] += 1 #TP att
                                  
-                
+              
+
+    for i in range(0,len(system_entity)):
+        tokList = system_entity[i].tokenAnchor
+        
+        if len(tokList) > 0:
+            if tokList in gold_token_entity:
+
+                #relaxed match
+                total_markable_relaxed_match_4precision += 1 #TP
+                correspEntityIdRM_sysGold[system_entity[i].eid] = gold_entity[gold_token_entity.index(tokList)].eid
+
+                for objE in objectEval:
+                    if system_entity[i].att[objE.lower()].upper() == gold_entity[gold_token_entity.index(tokList)].att[objE.lower()].upper() :
+                        #        total_att_match[objE.lower()] += 1 #TP att
+                        total_att_match_relaxed_4precision[objE.lower()] += 1 #TP att
+
+            #relaxed match
+            else:
+                for tokListGold in gold_token_entity:
+                    if relaxed_match(tokList,tokListGold) and not system_entity[i].eid in correspEntityIdRM_sysGold:
+                        total_markable_relaxed_match_4precision += 1 #TP
+                        correspEntityIdRM_sysGold[system_entity[i].eid] = gold_entity[gold_token_entity.index(tokListGold)].eid
+
+                        for objE in objectEval:
+                            if system_entity[i].att[objE.lower()].upper() == gold_entity[gold_token_entity.index(tokListGold)].att[objE.lower()].upper() :
+                                total_att_match_relaxed_4precision[objE.lower()] += 1 #TP att
+
+
+  
     total_gold_markable = len(gold_token_entity) 
     total_system_markable = len(system_token_entity)
 
@@ -943,11 +1040,11 @@ def compute_precision_recall(gold_entity, gold_token_entity, system_entity, syst
     #relaxed match
     relaxed_markable_recall = 0 
     if total_gold_markable != 0: 
-        relaxed_markable_recall = 1.0*total_markable_relaxed_match/total_gold_markable 
+        relaxed_markable_recall = 1.0*total_markable_relaxed_match_4recall/total_gold_markable 
 
     relaxed_markable_precision = 0
     if total_system_markable != 0:
-        relaxed_markable_precision = 1.0*total_markable_relaxed_match/total_system_markable
+        relaxed_markable_precision = 1.0*total_markable_relaxed_match_4precision/total_system_markable
     
     relaxed_markable_fmeasure = 0
     if relaxed_markable_precision != 0 and relaxed_markable_recall != 0:
@@ -984,6 +1081,8 @@ def compute_precision_recall(gold_entity, gold_token_entity, system_entity, syst
     global_gold_markable[eltName] += total_gold_markable
     global_markable_strict_match[eltName] += total_markable_strict_match
     global_markable_relaxed_match[eltName] += total_markable_relaxed_match #relaxed match
+    global_markable_relaxed_match_4recall[eltName] += total_markable_relaxed_match_4recall #relaxed match
+    global_markable_relaxed_match_4precision[eltName] += total_markable_relaxed_match_4precision #relaxed match
     global_system_token[eltName] += total_system_token
     global_gold_token[eltName] += total_gold_token
     
@@ -994,6 +1093,9 @@ def compute_precision_recall(gold_entity, gold_token_entity, system_entity, syst
     for objE in objectEval:
         global_att_markable_match[eltName][objE.lower()] += total_att_match[objE.lower()]
         global_att_markable_relaxed_match[eltName][objE.lower()] += total_att_match_relaxed[objE.lower()]
+        global_att_markable_relaxed_match_4recall[eltName][objE.lower()] += total_att_match_relaxed_4recall[objE.lower()]
+        global_att_markable_relaxed_match_4precision[eltName][objE.lower()] += total_att_match_relaxed_4precision[objE.lower()]
+
 
     return [correspEntityId,correspEntityIdRM,correspInstId]
 
@@ -1060,16 +1162,16 @@ def get_performance():
             output_text += '\t'
             
             output_text += str(global_markable_relaxed_match[eltN])+'\t'
-            fn = 1.0*(global_gold_markable[eltN]-global_markable_relaxed_match[eltN])
-            fp = 1.0*(global_system_markable[eltN]-global_markable_relaxed_match[eltN])
+            fn = 1.0*(global_gold_markable[eltN]-global_markable_relaxed_match_4recall[eltN])
+            fp = 1.0*(global_system_markable[eltN]-global_markable_relaxed_match_4precision[eltN])
             output_text += str(fp)+'\t'+str(fn)+'\t'
         
             micro_a_recall = 0
             if global_gold_markable[eltN] != 0:
-                micro_a_recall = 1.0*global_markable_relaxed_match[eltN]/global_gold_markable[eltN]
+                micro_a_recall = 1.0*global_markable_relaxed_match_4recall[eltN]/global_gold_markable[eltN]
             micro_a_precision = 0
             if global_system_markable[eltN] != 0:
-                micro_a_precision = 1.0*global_markable_relaxed_match[eltN]/global_system_markable[eltN]
+                micro_a_precision = 1.0*global_markable_relaxed_match_4precision[eltN]/global_system_markable[eltN]
             micro_a_fmeasure = 0
             if micro_a_recall != 0 and micro_a_precision != 0:
                 micro_a_fmeasure = 1.0*2*micro_a_recall*micro_a_precision/(micro_a_recall+micro_a_precision)
@@ -1095,7 +1197,10 @@ def get_performance():
     #output_text += '\n\n\nRelations'+'\t'+'TP'+'\t'+'FP'+'\t'+'FN'+'\t'+'recall'+'\t'+'precision'+'\t'+'F1-score'+'\t'+'F1-score attribute'+'\t'
     output_text += '\n\n\nRelations'+'\t'+'TP'+'\t'+'FP'+'\t'+'FN'+'\t'+'recall'+'\t'+'precision'+'\t'+'F1-score'+'\t'
 
-    global_list_relations_one2one_att['TLINK (strict match)'] = global_list_relations_one2one_att.get('TLINK')
+      
+    if 'TLINK' in global_list_relations_one2one_att:
+        global_list_relations_one2one_att['TLINK (strict match)'] = global_list_relations_one2one_att.get('TLINK')
+
     for eltN in global_list_relations_one2one_att:
         if eltN == "TLINK":
             output_text += '\n'+eltN+' (tempeval evaluation)\t'
@@ -1155,28 +1260,28 @@ def get_performance():
             output_text += '\t'
 
             micro_a_recall = 0 
-            if global_gold_relation[eltN] != 0: 
-                micro_a_recall = 1.0*global_relation_relaxed_match[eltN]/global_gold_relation[eltN]
+            if global_gold_relation_relaxed_match[eltN] != 0: 
+                micro_a_recall = 1.0*global_relation_relaxed_match[eltN]/global_gold_relation_relaxed_match[eltN]
 
         
             micro_a_precision = 0
-            if global_system_relation[eltN] != 0: 
-                micro_a_precision = 1.0*global_relation_relaxed_match[eltN]/global_system_relation[eltN]
+            if global_system_relation_relaxed_match[eltN] != 0: 
+                micro_a_precision = 1.0*global_relation_relaxed_match[eltN]/global_system_relation_relaxed_match[eltN]
          
             
             micro_a_fmeasure = 0
             if micro_a_recall != 0 and micro_a_precision != 0:
                 micro_a_fmeasure = 1.0*2*micro_a_recall*micro_a_precision/(micro_a_recall+micro_a_precision)
 
-            fp = 1.0*(global_system_relation[eltN]-global_relation_relaxed_match[eltN])
-            fn = 1.0*(global_gold_relation[eltN]-global_relation_relaxed_match[eltN])
+            fp = 1.0*(global_system_relation_relaxed_match[eltN]-global_relation_relaxed_match[eltN])
+            fn = 1.0*(global_gold_relation_relaxed_match[eltN]-global_relation_relaxed_match[eltN])
             output_text += str(global_relation_relaxed_match[eltN])+'\t'+str(fp)+'\t'+str(fn)+'\t'
             output_text += str(round(micro_a_recall,3))+'\t'+str(round(micro_a_precision,3))+'\t'+str(round(micro_a_fmeasure,3))+'\t'
     
             if debug >= 2: 
                 print '\n', eltN, 'FEATURE EXTRACTION PERFORMANCE (relaxed match)'
-                print 'total gold ',eltN,' or total features in gold data:', global_gold_relation[eltN]
-                print 'total gold ',eltN,' or total features in system data:', global_system_relation[eltN]
+                print 'total gold ',eltN,' or total features in gold data:', global_gold_relation_relaxed_match[eltN]
+                print 'total gold ',eltN,' or total features in system data:', global_system_relation_relaxed_match[eltN]
                 print 'total matching:', global_relation_relaxed_match[eltN]
 
             
@@ -1196,7 +1301,7 @@ def getMarkables5Sent (markable, token_list):
 
     list_token_5sent = []
     for tok in token_list:
-        if int(tok.getAttribute("sentence")) <= 6:
+        if int(tok.getAttribute("sentence")) <= 5 and int(tok.getAttribute("sentence")) >= 0:
             list_token_5sent.append(tok.getAttribute("t_id"))
 
     event_mentions = markable.getElementsByTagName("EVENT_MENTION")
@@ -1219,10 +1324,18 @@ def getMarkables5Sent (markable, token_list):
 def getRelations5Sent (relations, markable, token_list):
     new_relations_list = []
     
+    list_token_5sent = []
+    for tok in token_list:
+        if int(tok.getAttribute("sentence")) <= 5 and int(tok.getAttribute("sentence")) >= 1:
+            list_token_5sent.append(tok.getAttribute("t_id"))
+
+
     markables_id = []
     list_event = markable.getElementsByTagName("EVENT_MENTION")
     for m in list_event:
-        markables_id.append(m.getAttribute("m_id"))
+        token_id_m = get_element_value(m)
+        if token_id_m[0] in list_token_5sent:
+            markables_id.append(m.getAttribute("m_id"))
 
     list_timex = markable.getElementsByTagName("TIMEX3")
     for m in list_timex:
@@ -1231,6 +1344,21 @@ def getRelations5Sent (relations, markable, token_list):
 
     tlink = relations.getElementsByTagName("TLINK")
     for rel in tlink:
+        out = False
+        sources = rel.getElementsByTagName("source")
+        if len(sources) == 1:
+            if not sources[0].getAttribute("m_id") in markables_id:
+                out = True
+            if not out:
+                targets = rel.getElementsByTagName("target")
+                if len(targets) == 1:
+                    if not targets[0].getAttribute("m_id") in markables_id:
+                        out = True
+            if out:
+                relations.removeChild(rel)
+
+    clink = relations.getElementsByTagName("CLINK")
+    for rel in clink:
         out = False
         sources = rel.getElementsByTagName("source")
         if len(sources) == 1:
@@ -1267,7 +1395,7 @@ def evaluate_two_files2(gold_file, system_file):
     correspId = {}
     correspIdRM = {}
     correspId_inst = []
-    print gold_file
+    
     if debug >= 2: 
         print '\nEVALUATION:', system_file, ' VS ', gold_file
 
@@ -1312,6 +1440,8 @@ def evaluate_two_files2(gold_file, system_file):
     if evaluation_5_sent:
         markables_sys = getMarkables5Sent(markables_sys_all, list_token_sys)
         relations_sys = getRelations5Sent(relations_sys_all, markables_sys, list_token_sys)
+        markables_gold = getMarkables5Sent(markables_gold, list_token_gold)
+        relations_gold = getRelations5Sent(relations_gold, markables_gold, list_token_gold)
     else:
         markables_sys = markables_sys_all
         relations_sys = relations_sys_all
@@ -1339,9 +1469,15 @@ def evaluate_two_files2(gold_file, system_file):
         gold_rel = get_all_relation_value(relations_gold,eltName,global_list_relations_one2one_att[eltName], instance_gold)
         sys_rel = get_all_relation_value(relations_sys,eltName,global_list_relations_one2one_att[eltName], instance_sys)
 
+        gold_rel_markable_match_RM = get_all_relation_value_markable_match(gold_rel,correspIdRM)
+        sys_rel_markable_match_RM = get_all_relation_value_markable_match(sys_rel,get_inverse_dict(correspIdRM))
+        gold_rel_markable_match = get_all_relation_value_markable_match(gold_rel,correspId)
+        sys_rel_markable_match = get_all_relation_value_markable_match(sys_rel,get_inverse_dict(correspId))
+
         if eltName == "TLINK":
             compute_recall_precision_tlink_tempeval_format(gold_rel, sys_rel, correspId, correspId_inst, highest_id)
             #else: 
+        
         compute_precision_recall_relation_one2one(gold_rel, sys_rel, correspId, correspId_inst, global_list_relations_one2one_att[eltName], eltName, 'strict')
 
         compute_precision_recall_relation_one2one(gold_rel, sys_rel, correspIdRM, correspId_inst, global_list_relations_one2one_att[eltName], eltName, 'relaxed')

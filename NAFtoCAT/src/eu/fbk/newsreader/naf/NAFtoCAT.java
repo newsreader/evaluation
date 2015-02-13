@@ -10,9 +10,7 @@ import ixa.kaflib.Term;
 import ixa.kaflib.Timex3;
 import ixa.kaflib.WF;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -88,7 +86,7 @@ public class NAFtoCAT {
 			token.setAttributeNode(attrId);
 			
 			Attr attrSent = doc.createAttribute("sentence");
-			attrSent.setValue(Integer.toString(w.getSent()));
+			attrSent.setValue(Integer.toString(w.getSent()-1));
 			token.setAttributeNode(attrSent);
 			
 			Attr attrNum = doc.createAttribute("number");
@@ -145,6 +143,9 @@ public class NAFtoCAT {
 			while (predl.hasNext()) {
 				Predicate pred = predl.next();
 				
+				if(pred.getSpanStr().matches(".*(\"|(\'\')|(``)|(\\[)|(\\])).*")){
+				}
+				else{
 				//Coref co = getCoreferences(pred.getTerms().get(0).getId(),nafFile);
 				
 				//if(co != null){
@@ -173,7 +174,7 @@ public class NAFtoCAT {
 					markables.appendChild(doc.createTextNode("\n"));
 					markables.appendChild(event);
 					mid++;
-				//}
+				}
 			}
 		}
 		
@@ -201,17 +202,17 @@ public class NAFtoCAT {
 					
 					Element source = doc.createElement("source");
 					String mid_srce = tlink.getFrom().getId();
-					//if(mid_srce.equals("tmx0")){
-					//	mid_srce = "tmx1";
-					//}
+					if(mid_srce.equals("tmx0")){
+						mid_srce = "tmx1";
+					}
 					source.setAttribute("m_id", idNAFCAT.get(mid_srce));
 					tlinkRel.appendChild(source);
 					
 					Element target = doc.createElement("target");
 					String mid_target = tlink.getTo().getId();
-					//if(mid_target.equals("tmx0")){
-					//	mid_target = "tmx1";
-					//}
+					if(mid_target.equals("tmx0")){
+						mid_target = "tmx1";
+					}
 					target.setAttribute("m_id", idNAFCAT.get(mid_target));
 					tlinkRel.appendChild(target);
 					

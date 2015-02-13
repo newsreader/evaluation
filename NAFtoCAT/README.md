@@ -1,10 +1,15 @@
+========= NAFtoCAT =========
+Date: December 2014
 Author: Anne-Lyse Minard
-Date: 2014-12-19
 
-Conversion: from NAF format to CAT format
-- EVENT
-- TIMEX3
-- TLINK
-- CLINK
+Build CAT files following NewsReader task from NAF files.
+CAT files contain the following elements: 
+<EVENT_MENTION>
+<TIMEX3>
+<TLINK>
+<CLINK>
 
-> java -jar NAFtoCAT.jar fileInput fileOutput
+> sh run_NAFtoCAT.sh folder_input/ folder_output/
+
+* folder_input/ --> contains NAF files
+* folder_output/ --> will contain CAT files

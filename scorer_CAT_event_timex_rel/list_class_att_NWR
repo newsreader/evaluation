@@ -9,4 +9,4 @@ TLINK	one2one	undirectional	reltype
 CLINK	one2one	undirectional
 
 # instance
-TIMEX3	instance	comparable	type	value
+#TIMEX3	instance	comparable	type	value

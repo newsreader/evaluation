@@ -1,0 +1,12 @@
+#NAME	type(markable|one2one|many2one|instance)	specificity(directional|undirectional|comparable|non-comparable|0)	list_att
+
+# markable
+EVENT_MENTION	markable	0	class
+TIMEX3	markable	0	type	value
+
+# one2one
+TLINK	one2one	undirectional	reltype
+CLINK	one2one	undirectional
+
+# instance
+#TIMEX3	instance	comparable	type	value

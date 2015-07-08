@@ -21,14 +21,20 @@ sub is_part($$){
 sub get_to_compare($$){
     my ($key,$hashRef) = @_;
     my %hash = %{$hashRef};
+
+    my @output;
+
     foreach my $k (keys %hash){
 	if ($k =~ /(^|\-)$key($|\-)/){
-	    return $k;
+	    $output[$#output+1] = $k;
+	    #return $k;
 	}
 	elsif ($key =~ /(^|\-)$k($|\-)/){
-	    return $k;
+	    $output[$#output+1] = $k;
+	    #return $k;
 	}
     }
+    return @output;
 }
 
 
@@ -60,6 +66,9 @@ foreach my $sLine (@sysInfo){
     my $d = $info[0];
     my $span = $info[1];
     my $ned = $info[2];
+    if (!$goldEnt{$d}){
+	print $d . "\n";
+    }
     if ($goldEnt{$d}{$span}){
 	if ($goldEnt{$d}{$span} eq $ned){
 	    $TP++;
@@ -69,14 +78,21 @@ foreach my $sLine (@sysInfo){
 	}
     }
     if (is_part($span,\%{$goldEnt{$d}})){
-	my $goldKey = get_to_compare($span,\%{$goldEnt{$d}});
-	if ($goldEnt{$d}{$goldKey} eq $ned){
-	    $fuzzyTP++;
-	    print O "1\t" . $goldEnt{$d}{$goldKey} . "\t" .  $ned . "\t" . $d . "\t" . $goldKey . "\t" . $span . "\n";
+	my @goldKeys = get_to_compare($span,\%{$goldEnt{$d}});
+	if ($#goldKeys > 1){
+	    foreach my $a (@goldKeys){
+		print $d . "\t" . $span . "\t" . $a . "\t" . $ned . "\t" . $goldEnt{$d}{$a} . "\n";
+	    }
 	}
-	else{
-	    print $goldEnt{$d}{$goldKey} . "\t" .  $ned . "\n";
-	    print O "0\t" . $goldEnt{$d}{$goldKey} . "\t" .  $ned . "\t" . $d . "\t" . $goldKey . "\t" . $span . "\n";
+	foreach my $goldKey (@goldKeys){
+	    if ($goldEnt{$d}{$goldKey} eq $ned){
+		$fuzzyTP++;
+		print O "1\t" . $goldEnt{$d}{$goldKey} . "\t" .  $ned . "\t" . $d . "\t" . $goldKey . "\t" . $span . "\n";
+	    }
+	    else{
+		print $goldEnt{$d}{$goldKey} . "\t" .  $ned . "\n";
+		print O "0\t" . $goldEnt{$d}{$goldKey} . "\t" .  $ned . "\t" . $d . "\t" . $goldKey . "\t" . $span . "\n";
+	    }
 	}
     }
 

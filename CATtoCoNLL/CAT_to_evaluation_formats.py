@@ -1,6 +1,6 @@
 #!/usr/bin/python2.6
 
-#usage: python CAT_to_evaluation_formats.py [CAT files or folder] [SRL, NER] [output_folder]
+#usage: python CAT_to_evaluation_formats.py [CAT files or folder] [output_folder] [SRL, NER, fact] 
 
 import os 
 import re
@@ -34,10 +34,28 @@ def get_arg(index):
 # take input from command line and give error messages 
 # call appropriate functions to evaluate 
 def input_and_evaluate(): 
+    global all_ent_types
+    global all_synt_types
+    global type_annotation
+
     invalid = 'false' 
     arg1 = get_arg(1) 
     global directory_path 
     directory_path = get_directory_path(sys.argv[0])
+
+    if get_arg(3) == "SRL":
+        all_ent_types = True
+        all_synt_types = True
+        type_annotation = "all"
+        
+    elif get_arg(3) == "NER" and len(sys.argv) > 3:
+        if get_arg(4) == "inner":
+            type_annotation = "BIO-smallest"
+        elif get_arg(4) == "outer":
+            type_annotation = "BIO-biggest"
+    
+    elif get_arg(3) == "NER":
+        type_annotation = "all"
 
     # both arguments are directories 
     if os.path.isdir(arg1):
@@ -138,8 +156,10 @@ def get_all_element_value(elements, eltName, objectEval):
         
         for objE in objectEval:
             e.att[objE] = get_element_feat(elt, objE)
+            if e.att[objE] == "" and get_arg(3) == "factuality":
+                e.att[objE] = "O"
             
-        if len(e.tokenAnchor) > 0 and (not "syntactic_type" in e.att or all_synt_types or (e.att["syntactic_type"] == "NAM" or e.att["syntactic_type"] == "PRE.NAM")) :
+        if len(e.tokenAnchor) > 0 and (not "syntactic_type" in e.att or all_synt_types or (e.att["syntactic_type"] == "NAM" or e.att["syntactic_type"] == "PRE.NAM")):
         #if len(e.tokenAnchor) > 0:
             entityList.append(e)
 
@@ -234,6 +254,19 @@ def get_list_markable_tok_id (list_mention, list_ment_class):
             #        print "> 2"
     #list_id = sort_list_markable_extent(list_id)
     return list_id
+
+
+#build a dict: key --> token id, value --> list of markables containing this token
+def get_list_markable_tok_id_srl (list_mention):
+    list_id = {}
+    for ment in list_mention:
+        for tok in ment.tokenAnchor:
+            if tok in list_id:
+                list_id[tok].append(ment)
+            else:
+                list_id[tok] = [ment]
+    return list_id
+
 
 #build a dict: key --> token id, value --> list of markables containing this token
 def get_list_markable_smallest_biggest_bis (list_mention, list_ment_class, size):
@@ -650,6 +683,68 @@ def convertNER_multicol(list_token, list_entity_ment, list_entity_class, list_en
     return content
 
 
+def convertFact_multicol(list_token, list_event_ment):
+    global nb_per
+    global nb_loc
+    global nb_org
+    numSent = "0"
+    content = []
+    j = 0
+    first_tok_sent = 0
+    
+    prev_ent = ""
+
+    list_event_token_id = {}
+    for ev in list_event_ment:
+        for tokan in ev.tokenAnchor:
+            if tokan in list_event_token_id:
+                #don't keep CONJ
+                if len(ev.tokenAnchor) < len(list_event_token_id[tokan].tokenAnchor):
+                    list_event_token_id[tokan] = ev
+
+            else:
+                list_event_token_id[tokan] = ev
+
+    for tok in list_token:
+        if tok.firstChild:
+            if tok.getAttribute('sentence') != numSent:
+                content.insert(j,[""])
+                j+=1
+            
+            content.insert(j,[tok.firstChild.nodeValue,"t"+tok.getAttribute(token_id)])
+            #content.insert(j,[tok.firstChild.nodeValue])
+
+            if tok.getAttribute(token_id) in list_event_token_id:
+                ev = list_event_token_id[tok.getAttribute(token_id)]
+                if j > 0 and len(content[j]) < len(content[j-1]) and re.search("-EVENT",content[j-1][len(content[j])]) and len(ev.tokenAnchor) > 1:
+                    pref = "I-"
+                else:
+                    pref = "B-"
+                        
+                        
+                prev_ent = ev.eid
+                content[j].append(pref+"EVENT")
+
+                content[j].append(ev.att["polarity"])
+                content[j].append(ev.att["certainty"])
+                content[j].append(ev.att["time"])
+                
+            else:
+                prev_ent = ""
+                content[j].append("O")
+                content[j].append("O")
+                content[j].append("O")
+                content[j].append("O")
+                
+            numSent = tok.getAttribute("sentence")
+
+            #if not re.search("B-",content[j][len(content[j])-1]) and not re.search("I-",content[j][len(content[j])-1]):
+            #    content[j].append("O")
+            j += 1
+
+    return content
+
+
 
 def build_col_format_text(fileName, content):
     content_toprint = ""
@@ -665,13 +760,13 @@ def build_col_format_text(fileName, content):
     sys.stdout = codecs.getwriter('utf8')(sys.stdout)
     
     if len(sys.argv) > 3:
-        extent = ".conll"
-        if get_arg(2) == "NER":
+        extent = ".naf.conll"
+        if get_arg(3) == "NER":
             extent = ".naf.conll"
         fileOut = extract_name(fileName)
         fileOut = fileOut.replace(".txt.xml",extent)
         fileOut = fileOut.replace(".xml",extent)
-        f = codecs.open(get_arg(3)+fileOut,"w",encoding="utf-8")
+        f = codecs.open(get_arg(2)+fileOut,"w",encoding="utf-8")
         f.write(content_toprint)
         #sys.stdout = f
         
@@ -706,7 +801,7 @@ def read_CAT_file(fileName):
     list_has_participant = get_all_relation_value(relations, 'HAS_PARTICIPANT', ['sem_role'])
 
     list_entity_mention = get_all_element_value(markables,'ENTITY_MENTION',['head','syntactic_type'])
-    list_event_mention = get_all_element_value(markables,'EVENT_MENTION',['certainty','factuality'])
+    list_event_mention = get_all_element_value(markables,'EVENT_MENTION',['certainty','time','polarity','special_cases'])
 
     list_value_mention = get_all_element_value(markables, 'VALUE', ['head','syntactic_type'])
     for val in list_value_mention:
@@ -725,19 +820,25 @@ def read_CAT_file(fileName):
     content_to_write = []
     
     #Convert CAT files for SRL evaluation
-    if get_arg(2) == "SRL":
-        content_to_write = convertSRL(list_token, list_has_participant, get_list_markable_tok_id(list_event_mention), get_list_markable_tok_id(list_entity_mention), list_entityId_head)
+    if get_arg(3) == "SRL":
+        content_to_write = convertSRL(list_token, list_has_participant, get_list_markable_tok_id_srl(list_event_mention), get_list_markable_tok_id_srl(list_entity_mention), list_entityId_head)
 
     #Convert CAT files for NERC evaluation
-    elif get_arg(2) == "NER":
+    elif get_arg(3) == "NER":
         list_ent_mention_class = get_mention_class(list_entity_instance, rel_refers_to, "ent_type")
+        
+        list_entity_mention_class = []
+        for val in list_entity_mention:
+            if val.eid in list_ent_mention_class and (list_ent_mention_class[val.eid] == "ORG" or list_ent_mention_class[val.eid] == "LOC" or list_ent_mention_class[val.eid] == "PER"):
+                list_entity_mention_class.append(val)
+
         list_entity_tok_id = {}
         if type_annotation == "BIO-smallest":
             #list_entity_tok_id = get_list_markable_smallest_biggest_bis (list_entity_mention, list_ent_mention_class, "smallest")
-            list_entity_tok_id = get_list_smallest_biggest_markable_tok_id(list_entity_mention, "smallest")
+            list_entity_tok_id = get_list_smallest_biggest_markable_tok_id(list_entity_mention_class, "smallest")
         elif type_annotation == "BIO-biggest":
             #list_entity_tok_id = get_list_markable_smallest_biggest_bis (list_entity_mention, list_ent_mention_class, "biggest")
-            list_entity_tok_id = get_list_smallest_biggest_markable_tok_id(list_entity_mention, "biggest")
+            list_entity_tok_id = get_list_smallest_biggest_markable_tok_id(list_entity_mention_class, "biggest")
         elif type_annotation == "all":
             list_entity_tok_id = get_list_markable_tok_id(list_entity_mention, list_ent_mention_class)
 
@@ -746,10 +847,13 @@ def read_CAT_file(fileName):
         #else:
         content_to_write = convertNER_multicol(list_token, list_entity_mention, list_ent_mention_class, list_entity_tok_id)
 
+    elif get_arg(3) == "factuality":
+        content_to_write = convertFact_multicol(list_token, list_event_mention)
+
     build_col_format_text(fileName, content_to_write)
     
 
 input_and_evaluate()
-print "nb per: "+str(nb_per)
-print "nb org: "+str(nb_org)
-print "nb loc: "+str(nb_loc)
+#print "nb per: "+str(nb_per)
+#print "nb org: "+str(nb_org)
+#print "nb loc: "+str(nb_loc)

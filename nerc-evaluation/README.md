@@ -12,9 +12,26 @@ system's output, provided you have the gold standard or reference corpus in
 CoNLL 2003 format and the model and tagger to be evaluated. There are also some
 simple scripts to convert from Stanford NER tsv format to CoNLL 2003.
 
-**See also last section to obtain the results of the English tagger of the Newsreader pipeline evaluated on the Wikinews corpus**.
+### Wikinews corpora and ixa-pipe-nerc models
 
-### STEPS
+Models: [ixa-pipe-nerc-models](http://ixa2.si.ehu.es/ixa-pipes/models/nerc-models-1.5.0.tgz)
+
+And here you can find the Wikinews annotated dataset separated at outer and inner mentions:
+
+[Wikinews NERC gold standard](http://ixa2.si.ehu.es/ragerri/NER_CoNLL_gold_standard.tar.gz)
+
+### ALL in ONE STEP 
+
+If just just have the gold standard in CoNLL 2003 format execute this script
+passing the gold standard, the model and the conlleval.txt evaluation script 
+as parameters. **Note that you need to change the evaluation script to find
+the right paths of the executables.**
+
+````
+./eval-all-the-way.sh wikinews-outer-gold.conll03 model.bin conlleval.txt
+````
+
+### STEP by STEP
 
 * If you only have the gold standard dataset in CoNLL 2003 format follow all the steps.
 * If you have both the gold standard and the prediction in CoNLL 2003 format **go directly to step 3.**
@@ -67,16 +84,6 @@ If you use the -r option the token-based F1 is provided:
 ./conlleval -r < conlleval-test-nerc-model.txt
 ````
 
-### Wikinews corpora and ixa-pipe-nerc model
-
-The results reported in the D3.3.2 Newsreader deliverable are obtained with this model:
-
-[en-clusters-3class-muc7-conll03-ontonotes-4.0.bin](http://ixa2.si.ehu.es/ixa-pipes/models/en-clusters-3class-muc7-conll03-ontonotes-4.0.bin)
-
-And here you can find the Wikinews annotated dataset separated at outer and inner mentions:
-
-[Wikinews NERC gold standard](http://ixa2.si.ehu.es/ragerri/NER_CoNLL_gold_standard.tar.gz)
-
 ### Contact information
 
 ````shell
@@ -84,5 +91,5 @@ Rodrigo Agerri
 IXA NLP Group
 University of the Basque Country (UPV/EHU)
 E-20018 Donostia-San Sebastián
-rodrigo.agerri@ehu.es
+rodrigo.agerri@ehu.eus
 ````

@@ -21,13 +21,14 @@ system, provided you have the gold standard.
 #### 2) To obtain the automatic disambiguations of the first 5
      sentences from the NAF files.
 
-     > systemFiveSentences.pl inputDir outAnnotation outInfo
+     > systemFiveSentences.pl inputDir resource outAnnotation outInfo
 
      Given a directory, the script looks at the entities layer and it
-     extracts the ones with external references. It keeps just the
-     reference with the highest probability. The results are stores in
-     the outAnnotation file and each line has the following
-     information (separated by tab):
+     extracts the ones with external references that has been
+     extracted using the "resource". It keeps just the reference with
+     the highest probability. The results are stored in the
+     outAnnotation file and each line has the following information
+     (separated by tab):
 
      docid	 span	    entity (disambiguated)	entity-mention
 

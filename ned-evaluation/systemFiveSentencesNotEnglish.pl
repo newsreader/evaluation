@@ -6,7 +6,8 @@ use strict;
 use locale;
 
 my $sys = $ARGV[0];
-my $out = $ARGV[1];
+my $resource = $ARGV[1];
+my $out = $ARGV[2];
 
 my $f = "mappings_sys.csv";
 open(F,$f) or die "can't open $f\n";
@@ -74,7 +75,14 @@ foreach my $d (@docs){
 		if ($#refs >= 0){
 		    my @enRefs = $refs[0]->findnodes("externalRef");
 		    if ($#enRefs >= 0){
-			my $ref = $enRefs[0]->getAttribute("reference");
+			my $ref = "";
+			my $maxconf = 0.0;
+			foreach my $cref (@enRefs){
+			    if ($cref->getAttribute("resource") eq $resource && ($cref->getAttribute("confidence")+0.0)>$maxconf){
+				$maxconf=$cref->getAttribute("confidence");
+				$ref=$cref->getAttribute("reference");
+			    }
+			}
 			if ($ref =~ /dbpedia/){
 			    $ref =~ /.*\/(.*?)$/;
 			    $ref = $1;

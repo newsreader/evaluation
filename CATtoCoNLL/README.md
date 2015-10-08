@@ -8,10 +8,10 @@ Convert CAT annotation into CoNLL format for Named Entity Recognition and Semant
 
  
 Processing of a folder:
-> python CAT_to_CoNLL_format_NER_SRL.py folder_CAT [NER,SRL] folder_output
+> python CAT_to_CoNLL_format_NER_SRL.py folder_CAT folder_output [NER inner,NER outer,SRL,fact] 
 
 Processing of one file: 
-> python CAT_to_CoNLL_format_NER_SRL.py file_CAT [NER,SRL] folder_output
+> python CAT_to_CoNLL_format_NER_SRL.py file_CAT folder_output [NER inner,NER outer,SRL,fact]
 
 Paramaters (defined in the python script):
 type_annotation: inner ("BIO-smallest"), outer ("BIO-biggest") or all annotations ("all")

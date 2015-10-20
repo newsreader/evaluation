@@ -3,15 +3,15 @@
 Date: November 2014
 Author: Anne-Lyse Minard
 
-Convert CAT annotation into CoNLL format for Named Entity Recognition and Semantic Role Labelling evaluations.
+Convert CAT annotation into CoNLL format for Named Entity Recognition, Semantic Role Labelling and event factuality evaluations.
 
 
  
 Processing of a folder:
-> python CAT_to_CoNLL_format_NER_SRL.py folder_CAT folder_output [NER inner,NER outer,SRL,fact] 
+> python CAT_to_evaluation_formats.py folder_CAT folder_output [NER inner,NER outer,SRL,fact] 
 
 Processing of one file: 
-> python CAT_to_CoNLL_format_NER_SRL.py file_CAT folder_output [NER inner,NER outer,SRL,fact]
+> python CAT_to_evaluation_formats.py file_CAT folder_output [NER inner,NER outer,SRL,fact]
 
 Paramaters (defined in the python script):
 type_annotation: inner ("BIO-smallest"), outer ("BIO-biggest") or all annotations ("all")

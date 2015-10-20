@@ -24,6 +24,7 @@ foreach my $wf ($naf_root->findnodes('//wf'))
     {
         $wf_token=1;
     }
+
     $words->{$wf_id}->{sent} = $wf_sent;
     $words->{$wf_id}->{token} = $wf_token;
     $words->{$wf_id}->{word} = $wf_word;
@@ -44,10 +45,21 @@ foreach my $term ($naf_root->findnodes('//term'))
     my $term_id = $term->getAttributeNode('id')->textContent;
     my $term_lemma = $term->getAttributeNode('lemma')->textContent;
     my $term_pos = $term->getAttributeNode('pos')->textContent;
-    my $term_morpho = $term->getAttributeNode('morphofeat')->textContent;
-    if (!defined($term_morpho) || $term_morpho eq ''){
-	$term_morpho = "nil";
+    #my $term_morpho = $term->getAttributeNode('morphofeat')->textContent;
+    my $term_morpho = "nil";
+
+    if($term_lemma eq ""){
+	$term_lemma = "un";
     }
+    if($term_lemma =~ / /){
+	$term_lemma =~ s/ /_/g;
+    }
+    if($term_pos eq ""){
+	$term_pos eq "un";
+    }
+
+    $term_pos =~ s/ /_/g;
+
 
     foreach my $target ($term->findnodes('.//target'))
     {
@@ -69,6 +81,10 @@ foreach my $dep ($naf_root->findnodes('//deps/dep'))
     my $dep_to_word = $terms->{$dep_to};
     my $dep_rfunc = $dep->getAttributeNode('rfunc')->textContent;
  
+    if($dep_rfunc eq "-- / --"){
+	$dep_rfunc = "un";
+    }
+
     $words->{$dep_to_word}->{parent} = $words->{$dep_from_word}->{token};
     $words->{$dep_to_word}->{dep} = $dep_rfunc;
 }
@@ -77,24 +93,41 @@ foreach my $dep ($naf_root->findnodes('//deps/dep'))
 my $predicates;
 foreach my $srl ($naf_root->findnodes('//srl/predicate'))
 {
-    my $predicate = $srl->findnodes('./externalReferences/externalRef')->get_node(1)->getAttributeNode('reference')->textContent;
-    $predicate =~ /(.*?)\./;
-    $predicate = $1 . ".01";
+    my $predicate = "";
+    my @predicateL = $srl->findnodes('./externalReferences/externalRef');
+    for (my $i=0; $i<@predicateL; $i++){
+	if (defined($predicateL[$i]->getAttributeNode('resource')) && $predicateL[$i]->getAttributeNode('resource')->textContent eq "PropBank"){
+	    $predicate = $predicateL[$i]->getAttributeNode('reference')->textContent;
+	}
+    }
+
+    #my $predicate = $srl->findnodes('./externalReferences/externalRef')->get_node(1)->getAttributeNode('reference')->textContent;
     
+    if ($predicate =~ / /){
+	$predicate =~ s/ /_/;
+    }
+
     my $pred_sent;
     my $pred_token;
-    foreach my $predicate_target ($srl->findnodes('./span/target'))
-    {   
-        my $predicate_id = $predicate_target->getAttributeNode('id')->textContent;
-        my $predicate_word = $terms->{$predicate_id};
-        $words->{$predicate_word}->{ispred} = "Y";
-        $words->{$predicate_word}->{pred} = $predicate;
-        
-        $pred_sent = $words->{$predicate_word}->{sent};
-        $pred_token = $words->{$predicate_word}->{token};
-        
-        $predicates->{$pred_sent}->{$pred_token}->{pred} = $predicate;
+    
+#foreach my $predicate_target ($srl->findnodes('./span/target'))
+    #{
+    my $predicate_target = $srl->findnodes('./span/target')->get_node(1);
+    my $predicate_id = $predicate_target->getAttributeNode('id')->textContent;
+    my $predicate_word = $terms->{$predicate_id};
+    
+    if ($predicate eq ""){
+	$predicate = $words->{$predicate_word}->{lemma}.".01";
     }
+
+    $words->{$predicate_word}->{ispred} = "Y";
+    $words->{$predicate_word}->{pred} = $predicate;
+    
+    $pred_sent = $words->{$predicate_word}->{sent};
+    $pred_token = $words->{$predicate_word}->{token};
+    
+    $predicates->{$pred_sent}->{$pred_token}->{pred} = $predicate;
+    #}
     
     foreach my $role ($srl->findnodes('./role'))
     {
@@ -113,7 +146,18 @@ foreach my $srl ($naf_root->findnodes('//srl/predicate'))
 	}
 	else
 	{
-        my $filler_id = $role->findnodes('./span/target[@head="yes"]')->get_node(1)->getAttributeNode('id')->textContent;
+	    my $filler_id = "";
+	    my @filler_id_list = $role->findnodes('./span/target[@head="yes"]');
+	    for (my $i=0; $i<@filler_id_list; $i++){
+		if(defined($filler_id_list[$i]->getAttributeNode('head'))){
+		    $filler_id = $filler_id_list[$i]->getAttributeNode('id')->textContent;
+		}
+	    }
+	    if ($filler_id eq ""){
+		$filler_id =  $role->findnodes('./span/target')->get_node(1)->getAttributeNode('id')->textContent; 
+	    }
+
+	    #my $filler_id = $role->findnodes('./span/target[@head="yes"]')->get_node(1)->getAttributeNode('id')->textContent;
         my $filler_word = $terms->{$filler_id};
         
         $predicates->{$pred_sent}->{$pred_token}->{args}->{$filler_word} = $semRole;

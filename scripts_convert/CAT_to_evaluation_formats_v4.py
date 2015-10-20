@@ -1,6 +1,6 @@
 #!/usr/bin/python2.6
 
-#usage: python CAT_to_evaluation_formats.py [CAT files or folder] [SRL, NER] [output_folder]
+#usage: python CAT_to_evaluation_formats.py [CAT files or folder] [output_folder] [SRL, NER] 
 
 import os 
 import re
@@ -34,10 +34,28 @@ def get_arg(index):
 # take input from command line and give error messages 
 # call appropriate functions to evaluate 
 def input_and_evaluate(): 
+    global all_ent_types
+    global all_synt_types
+    global type_annotation
+
     invalid = 'false' 
     arg1 = get_arg(1) 
     global directory_path 
     directory_path = get_directory_path(sys.argv[0])
+
+    if get_arg(3) == "SRL":
+        all_ent_types = True
+        all_synt_types = True
+        type_annotation = "all"
+        
+    elif get_arg(3) == "NER" and len(sys.argv) > 3:
+        if get_arg(4) == "inner":
+            type_annotation = "BIO-smallest"
+        elif get_arg(4) == "outer":
+            type_annotation = "BIO-biggest"
+    
+    elif get_arg(3) == "NER":
+        type_annotation = "all"
 
     # both arguments are directories 
     if os.path.isdir(arg1):
@@ -122,7 +140,7 @@ def get_token_value(listTokAnchor, listToken):
 def get_list_tokenId_value(listToken):
     list_tokenId_value = {}
     for t in listToken:
-        list_tokenId_value[t.getAttribute("t_id")] = t.childNodes[0].nodeValue
+        list_tokenId_value[t.getAttribute(token_id)] = t.childNodes[0].nodeValue
     return list_tokenId_value
 
 def get_all_element_value(elements, eltName, objectEval):
@@ -138,8 +156,11 @@ def get_all_element_value(elements, eltName, objectEval):
         
         for objE in objectEval:
             e.att[objE] = get_element_feat(elt, objE)
+            if e.att[objE] == "" and get_arg(3) == "factuality":
+                e.att[objE] = "O"
             
-        if len(e.tokenAnchor) > 0 and (not "syntactic_type" in e.att or all_synt_types or (e.att["syntactic_type"] == "NAM" or e.att["syntactic_type"] == "PRE.NAM")) :
+        if len(e.tokenAnchor) > 0 and (not "syntactic_type" in e.att or all_synt_types or (e.att["syntactic_type"] == "NAM" or e.att["syntactic_type"] == "PRE.NAM")):
+#        if len(e.tokenAnchor) > 0 and (not "syntactic_type" in e.att or all_synt_types or (e.att["syntactic_type"] == "NAM")):
         #if len(e.tokenAnchor) > 0:
             entityList.append(e)
 
@@ -199,7 +220,11 @@ def get_mention_class(instances_list, refers_to_list, att):
                 sources = rel.source
                 for src in sources:
                     if instances_list[target].att[att] != "" and ((instances_list[target].att[att] != "PRO" and instances_list[target].att[att] != "FIN") or (all_ent_types == True)):
+                    #if instances_list[target].att[att] != "" and (instances_list[target].att[att] != "PRO" or all_ent_types == True):
+                        #if not instances_list[target].att[att] == "FIN":
                         mention_id_class_list[src] = instances_list[target].att[att]
+                        #else:
+                        #mention_id_class_list[src] = "ORG"
 
     return mention_id_class_list
 
@@ -216,6 +241,7 @@ def get_list_markable_tok_id (list_mention, list_ment_class):
     list_id = {}
     for ment in list_mention:
         if ment.eid in list_ment_class and (ment.att["syntactic_type"] == "NAM" or ment.att["syntactic_type"] == "PRE.NAM" or all_synt_types == True):
+#         if ment.eid in list_ment_class and (ment.att["syntactic_type"] == "NAM" or all_synt_types == True):
             for tok in ment.tokenAnchor:
                 if tok in list_id:
                     list_id[tok].append(ment)
@@ -235,11 +261,33 @@ def get_list_markable_tok_id (list_mention, list_ment_class):
     #list_id = sort_list_markable_extent(list_id)
     return list_id
 
+
+#build a dict: key --> token id, value --> list of markables containing this token
+def get_list_markable_tok_id_srl (list_mention):
+    list_id = {}
+    for ment in list_mention:
+        prev_id = -1
+        conj = False
+        for tok in ment.tokenAnchor:
+            if prev_id > -1 and int(tok) != prev_id+1:
+                conj = True
+            prev_id = int(tok)
+
+        if not conj:
+            for tok in ment.tokenAnchor:
+                if tok in list_id:
+                    list_id[tok].append(ment)
+                else:
+                    list_id[tok] = [ment]
+    return list_id
+
+
 #build a dict: key --> token id, value --> list of markables containing this token
 def get_list_markable_smallest_biggest_bis (list_mention, list_ment_class, size):
     list_id = {}
     for ment in list_mention:
         if ment.eid in list_ment_class and (ment.att["syntactic_type"] == "NAM" or ment.att["syntactic_type"] == "PRE.NAM" or all_synt_types == True):
+#        if ment.eid in list_ment_class and (ment.att["syntactic_type"] == "NAM" or all_synt_types == True):
             for tok in ment.tokenAnchor:
                 if tok in list_id:
                     list_id[tok].append(ment)
@@ -342,10 +390,12 @@ def get_type_timex(tokId, timex, attType):
 #Return True if the event containing the given token id is involved in HAS_PARTICIPANT relations
 def isEventHasPart(list_has_part, tok_id, list_event_tok_id):
     if tok_id in list_event_tok_id:
-        ev_id = list_event_tok_id[tok_id][0]
-        for rel in list_has_part:
-            if rel.source[0] == ev_id.eid:
-                return True
+        list_ev_id = list_event_tok_id[tok_id]
+        for ev_id in list_ev_id:
+        #ev_id = list_event_tok_id[tok_id][0]
+            for rel in list_has_part:
+                if rel.source[0] == ev_id.eid:
+                    return True
     return False
     
 
@@ -379,7 +429,7 @@ def getHasPartRoles_conll05(list_has_part, tok_id, list_entity_tok_id, list_enti
 
 
 #Using the syntactic_type and head attributes build a dict: key --> entity id, value --> the head of the entity or the nested entities of a APP or CONJ entity
-def getEntityIdHead(list_entity, list_tok_value):
+def getEntityIdHead_old(list_entity, list_tok_value):
     entityIdHead = {}
 
     for ent in list_entity:
@@ -434,6 +484,32 @@ def getEntityIdHead(list_entity, list_tok_value):
     return entityIdHead
 
 
+#Using the syntactic_type and head attributes build a dict: key --> entity id, value --> the head of the entity or the nested entities of a APP or CONJ entity
+def getEntityIdHead(list_entity, list_tok_value):
+    entityIdHead = {}
+
+    for ent in list_entity:
+        synt_type = ent.att["syntactic_type"]
+
+        j = 0
+        if ent.att["head"] != "":
+            tok_head = ent.att["head"].lower().split(" ")
+            #print ent.att["head"], str(len(tok_head))
+            for tok in ent.tokenAnchor:
+                if j < len(tok_head) and tok in list_tok_value and (list_tok_value[tok].lower() in tok_head[j] or tok_head[j] in list_tok_value[tok].lower()) :
+                    if ent.eid in entityIdHead:
+                        entityIdHead[ent.eid].append(tok)
+                    else:
+                        entityIdHead[ent.eid] = [tok]
+                    j+=1
+            if j < len(tok_head):
+                entityIdHead.pop(ent.eid, None)
+        else:
+            entityIdHead[ent.eid] = ent.tokenAnchor
+
+    return entityIdHead
+
+
 def convertSRL(list_token, list_has_part, list_event_tok_id, list_entity_tok_id, list_entityId_head):
     numSent = "0"
     content = []
@@ -465,16 +541,16 @@ def convertSRL(list_token, list_has_part, list_event_tok_id, list_entity_tok_id,
                 first_tok_sent = j
 
             
-            content.insert(j,[tok.getAttribute('t_id')])#ID
+            content.insert(j,[tok.getAttribute(token_id)])#ID
             content[j].append(tok.firstChild.nodeValue)#form
             
             #lemma, plemma, pos, ppos, feat, pfeat, head, phead, deprel, pdeprel
             for c in range(0,10):
                 content[j].append("_")
 
-            if isEventHasPart(list_has_part,tok.getAttribute('t_id'),list_event_tok_id) and not list_event_tok_id[tok.getAttribute('t_id')][0].eid in list_pred_rev:
+            if isEventHasPart(list_has_part,tok.getAttribute(token_id),list_event_tok_id) and not list_event_tok_id[tok.getAttribute(token_id)][0].eid in list_pred_rev:
                 
-                event = list_event_tok_id[tok.getAttribute('t_id')]
+                event = list_event_tok_id[tok.getAttribute(token_id)]
                 tok_anchor = event[0].tokenAnchor
                 if len(tok_anchor)>1:
                     ev_text = get_token_value(tok_anchor, list_token)
@@ -485,10 +561,26 @@ def convertSRL(list_token, list_has_part, list_event_tok_id, list_entity_tok_id,
                 else:
                     content[j].append("Y")
                     content[j].append(tok.firstChild.nodeValue.lower()+".01")
-                list_pred[j] = list_event_tok_id[tok.getAttribute('t_id')][0].eid
-                list_pred_rev[list_event_tok_id[tok.getAttribute('t_id')][0].eid] = cpt_pred
+                list_pred[j] = list_event_tok_id[tok.getAttribute(token_id)][0].eid
+                list_pred_rev[list_event_tok_id[tok.getAttribute(token_id)][0].eid] = cpt_pred
                 cpt_pred+=1
-                
+              
+            elif tok.getAttribute(token_id) in list_event_tok_id and not list_event_tok_id[tok.getAttribute(token_id)][0].eid in list_pred_rev:                
+                event = list_event_tok_id[tok.getAttribute(token_id)]
+                tok_anchor = event[0].tokenAnchor
+                if len(tok_anchor)>1:
+                    ev_text = get_token_value(tok_anchor, list_token)
+                    ev_text = ev_text.replace(" ","_")
+                    ev_text = ev_text[:-1]
+                    content[j].append("Y")
+                    content[j].append(ev_text.lower()+".01")
+                else:
+                    content[j].append("Y")
+                    content[j].append(tok.firstChild.nodeValue.lower()+".01")
+                list_pred[j] = list_event_tok_id[tok.getAttribute(token_id)][0].eid
+                list_pred_rev[list_event_tok_id[tok.getAttribute(token_id)][0].eid] = cpt_pred
+                cpt_pred+=1
+
             else: 
                 content[j].append("_")
                 content[j].append("_")
@@ -531,15 +623,15 @@ def convertSRL_conll05(list_token, list_has_part, list_event_tok_id, list_entity
                     for e in range(1,len(list_pred_rev)+1):
                         content[h].insert(e,'*')
 
-                    if len(content[h])>1 and list_token[h-int(numSent)].getAttribute('t_id') in list_entity_tok_id:
+                    if len(content[h])>1 and list_token[h-int(numSent)].getAttribute(token_id) in list_entity_tok_id:
                     #if len(content[h]) > 1:
-                        list_roles_tok = getHasPartRoles_conll05(list_has_part,list_token[h-int(numSent)].getAttribute('t_id'),list_entity_tok_id,list_entityId_head)
+                        list_roles_tok = getHasPartRoles_conll05(list_has_part,list_token[h-int(numSent)].getAttribute(token_id),list_entity_tok_id,list_entityId_head)
                         for pred in list_roles_tok:
                             if pred in list_pred_rev:
                                 if list_roles_tok[pred] != "":
                                     content[h][list_pred_rev[pred]+1] = list_roles_tok[pred].replace("Arg","A")
-                    if content[h][0] != "-" and len(content[h])>1 and list_token[h-int(numSent)].getAttribute('t_id') in list_event_tok_id:
-                        content[h][list_pred_rev[list_event_tok_id[list_token[h-int(numSent)].getAttribute('t_id')][0].eid]+1] = "(V*)"
+                    if content[h][0] != "-" and len(content[h])>1 and list_token[h-int(numSent)].getAttribute(token_id) in list_event_tok_id:
+                        content[h][list_pred_rev[list_event_tok_id[list_token[h-int(numSent)].getAttribute(token_id)][0].eid]+1] = "(V*)"
 
                 list_pred = {}
                 list_pred_rev = {}
@@ -555,9 +647,9 @@ def convertSRL_conll05(list_token, list_has_part, list_event_tok_id, list_entity
             #for c in range(0,10):
             #    content[j].append("_")
 
-            if isEventHasPart(list_has_part,tok.getAttribute('t_id'),list_event_tok_id) and not list_event_tok_id[tok.getAttribute('t_id')][0].eid in list_pred_rev:
+            if isEventHasPart(list_has_part,tok.getAttribute(token_id),list_event_tok_id) and not list_event_tok_id[tok.getAttribute(token_id)][0].eid in list_pred_rev:
                 
-                event = list_event_tok_id[tok.getAttribute('t_id')]
+                event = list_event_tok_id[tok.getAttribute(token_id)]
                 tok_anchor = event[0].tokenAnchor
                 if len(tok_anchor)>1:
                     ev_text = get_token_value(tok_anchor, list_token)
@@ -568,8 +660,8 @@ def convertSRL_conll05(list_token, list_has_part, list_event_tok_id, list_entity
                 else:
                     #content[j].append("Y")
                     content[j].append(tok.firstChild.nodeValue.lower())
-                list_pred[j] = list_event_tok_id[tok.getAttribute('t_id')][0].eid
-                list_pred_rev[list_event_tok_id[tok.getAttribute('t_id')][0].eid] = cpt_pred
+                list_pred[j] = list_event_tok_id[tok.getAttribute(token_id)][0].eid
+                list_pred_rev[list_event_tok_id[tok.getAttribute(token_id)][0].eid] = cpt_pred
                 cpt_pred+=1
                 
             else: 
@@ -585,9 +677,9 @@ def convertSRL_conll05(list_token, list_has_part, list_event_tok_id, list_entity
         for e in range(1,len(list_pred_rev)+1):
             content[h].insert(e,'*')
 
-        if len(content[h])>1 and list_token[h-int(numSent)].getAttribute('t_id') in list_entity_tok_id:
+        if len(content[h])>1 and list_token[h-int(numSent)].getAttribute(token_id) in list_entity_tok_id:
             #print "end: ",list_token[h].firstChild.childNode
-            list_roles_tok = getHasPartRoles_conll05(list_has_part,list_token[h-int(numSent)].getAttribute('t_id'),list_entity_tok_id,list_entityId_head)
+            list_roles_tok = getHasPartRoles_conll05(list_has_part,list_token[h-int(numSent)].getAttribute(token_id),list_entity_tok_id,list_entityId_head)
             for pred in list_roles_tok:
                 if pred in list_pred_rev:
                     if list_roles_tok[pred] != "":
@@ -620,13 +712,16 @@ def convertNER_multicol(list_token, list_entity_ment, list_entity_class, list_en
                 list_ent_id = list_entity_tok_id[tok.getAttribute(token_id)]
                 for ent in list_ent_id:
                     if (ent.att["syntactic_type"] == "NAM" or ent.att["syntactic_type"] == "PRE.NAM" or all_synt_types==True) and ent.eid in list_entity_class:
+#                     if (ent.att["syntactic_type"] == "NAM" or all_synt_types==True) and ent.eid in list_entity_class:
                         #if prev_ent != "" and prev_ent == ent.eid:
                         
                         if j > 0 and len(content[j]) < len(content[j-1]) and re.search("-"+list_entity_class[ent.eid],content[j-1][len(content[j])]):
                             pref = "I-"
                         else:
-                            pref = "B-"
-                        
+                            if j > 0 and len(content[j]) < len(content[j-1]) and content[j-1][len(content[j])] == "I-"+list_entity_class[ent.eid]:
+                                pref = "B-"
+                            else:
+                                pref = "I-"
                         
                         prev_ent = ent.eid
                         content[j].append(pref+list_entity_class[ent.eid])
@@ -650,6 +745,84 @@ def convertNER_multicol(list_token, list_entity_ment, list_entity_class, list_en
     return content
 
 
+def convertFact_multicol(list_token, list_event_ment):
+    global nb_per
+    global nb_loc
+    global nb_org
+    numSent = "0"
+    content = []
+    j = 0
+    first_tok_sent = 0
+    
+    prev_ent = ""
+
+    list_event_token_id = {}
+    for ev in list_event_ment:
+        for tokan in ev.tokenAnchor:
+            if tokan in list_event_token_id:
+                #don't keep CONJ
+                if len(ev.tokenAnchor) < len(list_event_token_id[tokan].tokenAnchor):
+                    list_event_token_id[tokan] = ev
+
+            else:
+                list_event_token_id[tokan] = ev
+
+    for tok in list_token:
+        if tok.firstChild:
+            if tok.getAttribute('sentence') != numSent:
+                content.insert(j,[""])
+                j+=1
+            
+            content.insert(j,[tok.firstChild.nodeValue,"t"+tok.getAttribute(token_id)])
+            #content.insert(j,[tok.firstChild.nodeValue])
+
+            if tok.getAttribute(token_id) in list_event_token_id:
+                ev = list_event_token_id[tok.getAttribute(token_id)]
+                if j > 0 and len(content[j]) < len(content[j-1]) and re.search("-EVENT",content[j-1][len(content[j])]) and len(ev.tokenAnchor) > 1:
+                    pref = "I-"
+                else:
+                    pref = "B-"
+                        
+                        
+                prev_ent = ev.eid
+                content[j].append(pref+"EVENT")
+
+                content[j].append(ev.att["polarity"])
+                content[j].append(ev.att["certainty"])
+                content[j].append(ev.att["time"])
+                
+            else:
+                prev_ent = ""
+                content[j].append("O")
+                content[j].append("O")
+                content[j].append("O")
+                content[j].append("O")
+                
+            numSent = tok.getAttribute("sentence")
+
+            #if not re.search("B-",content[j][len(content[j])-1]) and not re.search("I-",content[j][len(content[j])-1]):
+            #    content[j].append("O")
+            j += 1
+
+    return content
+
+
+def transferHasPartLightVerb (list_has_participant, list_glink):
+    glinkTargetSource = {}
+    list_has_participant_new = []
+
+    for glink in list_glink:
+        source = glink.source
+        target = glink.target
+        glinkTargetSource[target[0]] = source[0] 
+
+    for hasPart in list_has_participant:
+        if hasPart.source[0] in glinkTargetSource:
+            hasPart.source[0] = glinkTargetSource[hasPart.source[0]]
+        list_has_participant_new.append(hasPart)
+
+    return list_has_participant_new
+
 
 def build_col_format_text(fileName, content):
     content_toprint = ""
@@ -665,13 +838,13 @@ def build_col_format_text(fileName, content):
     sys.stdout = codecs.getwriter('utf8')(sys.stdout)
     
     if len(sys.argv) > 3:
-        extent = ".conll"
-        if get_arg(2) == "NER":
+        extent = ".naf.conll"
+        if get_arg(3) == "NER":
             extent = ".naf.conll"
         fileOut = extract_name(fileName)
         fileOut = fileOut.replace(".txt.xml",extent)
         fileOut = fileOut.replace(".xml",extent)
-        f = codecs.open(get_arg(3)+fileOut,"w",encoding="utf-8")
+        f = codecs.open(get_arg(2)+fileOut,"w",encoding="utf-8")
         f.write(content_toprint)
         #sys.stdout = f
         
@@ -687,7 +860,9 @@ def get_list_elt_ment_by_id(list_elt_ment):
 
 
 def read_CAT_file(fileName): 
-
+    global markable_id
+    global relation_id
+    global token_id
     #print fileName
     
     #parse the file
@@ -701,12 +876,18 @@ def read_CAT_file(fileName):
 
     #get tokens
     list_token = xmldoc.getElementsByTagName('token')
-    
+
+    if list_token[0].hasAttribute("id") :
+        markable_id = "id"
+        token_id = "id"
+        relation_id = "id"
+
     rel_refers_to = get_all_relation_value(relations,'REFERS_TO',{})
     list_has_participant = get_all_relation_value(relations, 'HAS_PARTICIPANT', ['sem_role'])
+    list_glink = get_all_relation_value(relations, "GLINK",{})
 
     list_entity_mention = get_all_element_value(markables,'ENTITY_MENTION',['head','syntactic_type'])
-    list_event_mention = get_all_element_value(markables,'EVENT_MENTION',['certainty','factuality'])
+    list_event_mention = get_all_element_value(markables,'EVENT_MENTION',['certainty','time','polarity','special_cases'])
 
     list_value_mention = get_all_element_value(markables, 'VALUE', ['head','syntactic_type'])
     for val in list_value_mention:
@@ -725,19 +906,27 @@ def read_CAT_file(fileName):
     content_to_write = []
     
     #Convert CAT files for SRL evaluation
-    if get_arg(2) == "SRL":
-        content_to_write = convertSRL(list_token, list_has_participant, get_list_markable_tok_id(list_event_mention), get_list_markable_tok_id(list_entity_mention), list_entityId_head)
+    if get_arg(3) == "SRL":
+        list_has_participant_new = transferHasPartLightVerb(list_has_participant, list_glink)
+        content_to_write = convertSRL(list_token, list_has_participant_new, get_list_markable_tok_id_srl(list_event_mention), get_list_markable_tok_id_srl(list_entity_mention), list_entityId_head)
 
     #Convert CAT files for NERC evaluation
-    elif get_arg(2) == "NER":
+    elif get_arg(3) == "NER":
         list_ent_mention_class = get_mention_class(list_entity_instance, rel_refers_to, "ent_type")
+        
+        list_entity_mention_class = []
+        for val in list_entity_mention:
+            if val.eid in list_ent_mention_class and (list_ent_mention_class[val.eid] == "ORG" or list_ent_mention_class[val.eid] == "LOC" or list_ent_mention_class[val.eid] == "PER"):
+#            if val.eid in list_ent_mention_class and (list_ent_mention_class[val.eid] == "ORG" or list_ent_mention_class[val.eid] == "LOC" or list_ent_mention_class[val.eid] == "PER" or list_ent_mention_class[val.eid] == "FIN"):
+                list_entity_mention_class.append(val)
+
         list_entity_tok_id = {}
         if type_annotation == "BIO-smallest":
             #list_entity_tok_id = get_list_markable_smallest_biggest_bis (list_entity_mention, list_ent_mention_class, "smallest")
-            list_entity_tok_id = get_list_smallest_biggest_markable_tok_id(list_entity_mention, "smallest")
+            list_entity_tok_id = get_list_smallest_biggest_markable_tok_id(list_entity_mention_class, "smallest")
         elif type_annotation == "BIO-biggest":
             #list_entity_tok_id = get_list_markable_smallest_biggest_bis (list_entity_mention, list_ent_mention_class, "biggest")
-            list_entity_tok_id = get_list_smallest_biggest_markable_tok_id(list_entity_mention, "biggest")
+            list_entity_tok_id = get_list_smallest_biggest_markable_tok_id(list_entity_mention_class, "biggest")
         elif type_annotation == "all":
             list_entity_tok_id = get_list_markable_tok_id(list_entity_mention, list_ent_mention_class)
 
@@ -746,10 +935,13 @@ def read_CAT_file(fileName):
         #else:
         content_to_write = convertNER_multicol(list_token, list_entity_mention, list_ent_mention_class, list_entity_tok_id)
 
+    elif get_arg(3) == "factuality":
+        content_to_write = convertFact_multicol(list_token, list_event_mention)
+
     build_col_format_text(fileName, content_to_write)
     
 
 input_and_evaluate()
-print "nb per: "+str(nb_per)
-print "nb org: "+str(nb_org)
-print "nb loc: "+str(nb_loc)
+#print "nb per: "+str(nb_per)
+#print "nb org: "+str(nb_org)
+#print "nb loc: "+str(nb_loc)

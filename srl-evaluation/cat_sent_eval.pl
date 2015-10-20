@@ -18,38 +18,65 @@ if ($ARGV[1] =~ /sys/){
 
 my $numLPrint=0;
 foreach my $f (@files){
-    open(IN,"<".$f);
+    open(my $IN,"<",$f);
+    chomp(my @lines = <$IN>);
+    close $IN;
+
     my $numSent = 0;
-    while(<IN>){
+    my $emptyLine = 0;
+    
+    for (my $i=0; $i<@lines; $i++){
+	my $line = $lines[$i];
+    #while(<IN>){
 	if($numSent < 6 && $numSent != 1){
-	    if(m/^(\t)*$/){
+	    if($line =~ m/^(\t)*$/){
 		$numSent ++;
 		$numLPrint ++;
+		if($emptyLine == 1){
+		    $emptyLine = 2;
+		}
+		else{
+		    $emptyLine = 1;
+		}
 	    }
 	    elsif ($gold){
-		my @elts = split("\t",$_);
-		if ($elts[13] ne "_"){
+		$emptyLine = 0;
+		my @elts = split("\t",$line);
+		if ($elts[13] ne "_" && $elts[13] =~ /_/){
+		    my $lemmaPred = $elts[2];
+		    my @token = split("_",$elts[13]);
+		    for (my $j=$i+1; $j<$i+@token; $j++){
+			my @eltsTemp = split("\t",$lines[$j]);
+			$lemmaPred .= "_".$eltsTemp[2];
+		    }
+		    $lemmaPred .= ".01";
+		    $line =~ s/\t$elts[13]\t/\t$lemmaPred\t/;
+		}
+		elsif ($elts[13] ne "_"){
 		    my $lemmaPred = $elts[2].".01";
-		    s/\t$elts[13]\t/\t$lemmaPred\t/;
+		    $line =~ s/\t$elts[13]\t/\t$lemmaPred\t/;
 		}
 	    }
 	    else{
-		my @elts = split("\t",$_);
+		$emptyLine = 0;
+		my @elts = split("\t",$line);
 		if ($elts[13] ne "_" && ($elts[13] =~ /\.0[^1]/ || $elts[13] =~ /\.1\d/)){
 		    my $lemmaPred = $elts[2].".01";
 		    #$lemmaPred =~ s/\.(.*)$//;
-		    s/\t$elts[13]\t/\t$lemmaPred\t/;
+		    $line =~ s/\t$elts[13]\t/\t$lemmaPred\t/;
 		}
-		s/\tAM-([^\t]+)/\tAm-$1/g;
-		s/\tam-((ext)|(mnr)|(neg)|(tmp)|(adv)|(cau)|(dir)|(dis)|(mod)|(pnc)|(tmp))/\tAm-OTHER/gi;
-		s/\tc-a1/\tA1/gi;
-		s/\tr-((a0)|(a1)|(a2)|(am-loc)|(am-tmp))/\t$1/gi;
+		$line =~ s/\tAM-([^\t]+)/\tAm-$1/g;
+		$line =~ s/\tam-((ext)|(mnr)|(neg)|(tmp)|(adv)|(cau)|(dir)|(dis)|(mod)|(pnc)|(tmp))/\tAm-OTHER/gi;
+		$line =~ s/\tc-a1/\tA1/gi;
+		$line =~ s/\tr-((a0)|(a1)|(a2)|(am-loc)|(am-tmp))/\t$1/gi;
 	    }
 	    #$numLPrint ++;
-	    print OUT $_;
+	    if($emptyLine == 0 || $emptyLine == 1){
+		print OUT $line."\n";
+	    }
 	}
 	elsif($numSent == 1){
-	    if(m/^(\t)*$/){
+	    if($line =~ m/^(\t)*$/){
 		$numSent ++;
 		#$numLPrint ++;
 	    }
@@ -58,7 +85,7 @@ foreach my $f (@files){
 	    last;
 	}
     }
-    close IN;
+    #close IN;
 }
 
 close OUT;

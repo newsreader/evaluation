@@ -6,10 +6,9 @@ use strict;
 use locale;
 
 my $sys = $ARGV[0];
-my $resource = $ARGV[1];
-my $out = $ARGV[2];
+my $out = $ARGV[1];
 
-my $f = $ARGV[4]."mappings_sys.csv";
+my $f = $ARGV[2]."mappings_sys.csv";
 open(F,$f) or die "can't open $f\n";
 my @lines = <F>;
 close(F);
@@ -55,49 +54,36 @@ foreach my $d (@docs){
 	    my @targets = $entity->findnodes("references/span/target");
 	    my $pos = 0;
 	    my $h = $targets[0]->getAttribute("id");
-	    $h =~ /[^0-9]+([0-9]+)/;
+	    $h =~ /t(.*)/;
 	    $h = $1;
 	    if ($h <= $max){
 	    #if ($targets[0]->getAttribute("id") <= $max){
 		while ($pos < $#targets){
 		    my $id = $targets[$pos]->getAttribute("id");
-		    $id =~ /[^0-9]+([0-9]+)/;
+		    $id =~ /t(.*)/;
 		    $id = $1;
 		    $span .= $id . "-";
 		    $pos++;
 		}
 		#$span .= $targets[$#targets]->getAttribute("id");
 		my $h = $targets[$#targets]->getAttribute("id");
-		$h =~ /[^0-9]+([0-9]+)/;
+		$h =~ /t(.*)/;
 		$span .= $1;
 		
 		my @refs = $entity->findnodes("externalReferences/externalRef");
 		if ($#refs >= 0){
-		    my @enRefs = $refs[0]->findnodes("externalRef");
-		    if ($#enRefs >= 0){
-			my $ref = "";
-			my $maxconf = 0.0;
-			foreach my $cref (@enRefs){
-			    if ($cref->getAttribute("resource") eq $resource && ($cref->getAttribute("confidence")+0.0)>$maxconf){
-				$maxconf=$cref->getAttribute("confidence");
-				$ref=$cref->getAttribute("reference");
-			    }
+		    my $ref = $refs[0]->getAttribute("reference");
+		    if ($ref =~ /dbpedia/){
+			$ref =~ /.*\/(.*?)$/;
+			$ref = $1;
+
+			if ($mappings{$ref}){
+			    print O "$docname\t$span\t$mappings{$ref}\n";
 			}
-			if ($ref =~ /dbpedia/){
-			    $ref =~ /.*\/(.*?)$/;
-			    $ref = $1;
-			    
-			    if ($mappings{$ref}){
-				print O "$docname\t$span\t$mappings{$ref}\n";
-			    }
-			    else{
-				print O "$docname\t$span\t$ref\n";
-			    }
-			    
+			else{
+			    print O "$docname\t$span\t$ref\n";
 			}
-		    }
-		    else{
-			print "Not English mapping $docname\t$span\n";
+
 		    }
 		}
 	    }

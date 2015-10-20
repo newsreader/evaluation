@@ -6,8 +6,9 @@ use strict;
 use locale;
 
 my $input = $ARGV[0];
-my $out = $ARGV[1];
-my $outNum = $ARGV[2];
+my $resource = $ARGV[1];
+my $out = $ARGV[2];
+my $outNum = $ARGV[3];
 
 
 my $parser = XML::LibXML->new();
@@ -68,7 +69,16 @@ foreach my $d (@docs){
 		    $span .= $1;
 		    $mention .= $tokens{$1};
 
-		    my $ref = $refs[0]->getAttribute("reference");
+
+		    my $ref = "";
+		    my $maxconf = 0.0;
+		    foreach my $cref (@refs){
+			if ($cref->getAttribute("resource") eq $resource && ($cref->getAttribute("confidence")+0.0)>$maxconf){
+				$maxconf=$cref->getAttribute("confidence");
+				$ref=$cref->getAttribute("reference");
+			}
+		    }
+	
 		    if ($ref =~ /dbpedia/){
 			$ref =~ /.*\/(.*?)$/;
 			$ref = $1;

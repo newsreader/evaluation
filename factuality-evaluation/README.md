@@ -3,7 +3,7 @@ factuality evaluation
 
 factuality_to_conll.py
 
-takes a naf file with token, term, factuality and coreference layer as input and prints a conll representation of tokens with event indication and factuality values as output.
+takes a naf file with token, term, factuality and srl layer as input and prints a conll representation of tokens with event indication and factuality values as output.
 
 token termid event polarity certainty time
 President t1 O O O O

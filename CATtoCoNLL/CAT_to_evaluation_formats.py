@@ -1,10 +1,7 @@
 #!/usr/bin/python2.6
 
-#author: Anne-Lyse Minard (FBK, Trento)
-#version: 1.4
-#date: october 2015
-
-#usage: python CAT_to_evaluation_formats.py [CAT files or folder] [output_folder] [SRL, NER inner, NER outer, fact] 
+#usage: python CAT_to_evaluation_formats.py [CAT files or folder] [output_folder] [lang] [SRL, NER] 
+#version 5: add option language
 
 import os 
 import re
@@ -19,6 +16,9 @@ type_annotation = "all" #BIO-smallest: annotate inner extents; BIO-biggest: anno
 
 all_ent_types = False #if False only ORG, LOC and PER, else also FIN and PRO
 all_synt_types = False #if False only NAM and PRE.NAM, else all (some problem to resolve if True)
+
+lang = "en"
+layer = ""
 #####
 
 
@@ -41,25 +41,35 @@ def input_and_evaluate():
     global all_ent_types
     global all_synt_types
     global type_annotation
+    global lang
+    global layer
 
     invalid = 'false' 
     arg1 = get_arg(1) 
     global directory_path 
     directory_path = get_directory_path(sys.argv[0])
 
-    if get_arg(3) == "SRL":
+    id_arg_layer = 3
+
+    if len(get_arg(3)) == 2 and get_arg(3) in ("es","en","it","nl"):
+        lang = get_arg(3)
+        id_arg_layer = 4
+
+    if get_arg(id_arg_layer) == "SRL":
         all_ent_types = True
         all_synt_types = True
         type_annotation = "all"
         
-    elif get_arg(3) == "NER" and len(sys.argv) > 3:
-        if get_arg(4) == "inner":
+    elif get_arg(id_arg_layer) == "NER" and len(sys.argv) > id_arg_layer:
+        if get_arg(id_arg_layer+1) == "inner":
             type_annotation = "BIO-smallest"
-        elif get_arg(4) == "outer":
+        elif get_arg(id_arg_layer+1) == "outer":
             type_annotation = "BIO-biggest"
     
-    elif get_arg(3) == "NER":
+    elif get_arg(id_arg_layer) == "NER":
         type_annotation = "all"
+
+    layer = get_arg(id_arg_layer)
 
     # both arguments are directories 
     if os.path.isdir(arg1):
@@ -515,6 +525,7 @@ def getEntityIdHead(list_entity, list_tok_value):
 
 
 def convertSRL(list_token, list_has_part, list_event_tok_id, list_entity_tok_id, list_entityId_head):
+    global lang
     numSent = "0"
     content = []
     j = 0
@@ -537,7 +548,10 @@ def convertSRL(list_token, list_has_part, list_event_tok_id, list_entity_tok_id,
                         for pred in list_roles_tok:
                             if pred in list_pred_rev:
                                 if list_roles_tok[pred] != "":
-                                    content[h][list_pred_rev[pred]+14] = list_roles_tok[pred].replace("Arg","A")
+                                    if lang == "es":
+                                        content[h][list_pred_rev[pred]+14] = list_roles_tok[pred].replace("Arg","arg")
+                                    else:
+                                        content[h][list_pred_rev[pred]+14] = list_roles_tok[pred].replace("Arg","A")
                 
                 list_pred = {}
                 list_pred_rev = {}
@@ -603,7 +617,10 @@ def convertSRL(list_token, list_has_part, list_event_tok_id, list_entity_tok_id,
             for pred in list_roles_tok:
                 if pred in list_pred_rev:
                     if list_roles_tok[pred] != "":
-                        content[h][list_pred_rev[pred]+14] = list_roles_tok[pred].replace("Arg","A")
+                        if lang == "es":
+                            content[h][list_pred_rev[pred]+14] = list_roles_tok[pred].replace("Arg","arg")
+                        else:
+                            content[h][list_pred_rev[pred]+14] = list_roles_tok[pred].replace("Arg","A")
 
     return content
 
@@ -867,6 +884,7 @@ def read_CAT_file(fileName):
     global markable_id
     global relation_id
     global token_id
+    global layer
     #print fileName
     
     #parse the file
@@ -910,12 +928,12 @@ def read_CAT_file(fileName):
     content_to_write = []
     
     #Convert CAT files for SRL evaluation
-    if get_arg(3) == "SRL":
-        list_has_participant_new = transferHasPartLightVerb(list_has_participant, list_glink)
-        content_to_write = convertSRL(list_token, list_has_participant_new, get_list_markable_tok_id_srl(list_event_mention), get_list_markable_tok_id_srl(list_entity_mention), list_entityId_head)
+    if layer == "SRL":
+        #list_has_participant_new = transferHasPartLightVerb(list_has_participant, list_glink)
+        content_to_write = convertSRL(list_token, list_has_participant, get_list_markable_tok_id_srl(list_event_mention), get_list_markable_tok_id_srl(list_entity_mention), list_entityId_head)
 
     #Convert CAT files for NERC evaluation
-    elif get_arg(3) == "NER":
+    elif layer == "NER":
         list_ent_mention_class = get_mention_class(list_entity_instance, rel_refers_to, "ent_type")
         
         list_entity_mention_class = []
@@ -939,7 +957,7 @@ def read_CAT_file(fileName):
         #else:
         content_to_write = convertNER_multicol(list_token, list_entity_mention, list_ent_mention_class, list_entity_tok_id)
 
-    elif get_arg(3) == "factuality":
+    elif layer == "factuality":
         content_to_write = convertFact_multicol(list_token, list_event_mention)
 
     build_col_format_text(fileName, content_to_write)

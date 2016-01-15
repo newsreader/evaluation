@@ -51,10 +51,17 @@ public class NAFtoCAT {
 		//BufferedReader br = new BufferedReader(new FileReader(args[0]));
 		
 		//BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-		String fileNameOut = args[1];
+		if(new File(args[0]).isDirectory()){
+			for (File f : new File(args[0]).listFiles()){
+				String fileNameOut = args[1]+f.getName()+".xml";
+				NAF2CAT(f, fileNameOut);
+			}
+		}
+		else if(new File(args[0]).isFile()){
+			String fileNameOut = args[1];
 		
-		NAF2CAT(new File(args[0]), fileNameOut);
-		
+			NAF2CAT(new File(args[0]), fileNameOut);
+		}
 		
 	}
 	

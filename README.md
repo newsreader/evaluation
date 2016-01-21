@@ -52,6 +52,8 @@ If cross-document annotated files are different than intra-document annotated fi
 In order to run the evaluation for Dutch, Spanish and Italian:
 > mkdir gold_dutch/
 > mkdir gold_dutch/gold_CAT/
+> mkdir gold_dutch/gold_CROMER/
 
-And copy the cat files into gold_dutch/gold_CAT/
+And copy the intra-doc files (annotated with CAT) into gold_dutch/gold_CAT/ and the cross-doc files (annotated with CROMER) into gold_dutch/gold_CROMER/.
 
+The gold standard files can be downloaded from the newsreader website: http://www.newsreader-project.eu/results/data/wikinews

@@ -1,5 +1,7 @@
-from KafNafParserPy import *
 import sys
+import codecs
+
+from KafNafParserPy import *
 
 
 def create_event_dict(nafobj):
@@ -22,6 +24,23 @@ def create_event_dict(nafobj):
     return event_dict
 
 
+def create_event_pred_dict(nafobj):
+    '''
+    Goes through predicate layer and returns dictionary of events where first occurring term is the key
+    '''
+    event_dict = {}
+    clayer = nafobj.srl_layer
+    for pred in clayer.get_predicates():
+        myspan = pred.get_span();
+        span_ids = myspan.get_span_ids()
+        firstTerm = span_ids[0]
+        additionalIds = []
+        for x in range(1, len(span_ids)):
+            additionalIds.append(span_ids[x])
+        event_dict[firstTerm] = additionalIds
+    return event_dict
+
+
 def get_event_factuality_info(nafobj, eventDict):
     '''
     Takes nafobj and eventdictionary (linking event's first term to following event terms) and nafobj and creates dictionary
@@ -35,11 +54,11 @@ def get_event_factuality_info(nafobj, eventDict):
         myvals = {}
         for fVal in factuality.get_factVals():
             myvals[fVal.get_resource()] = fVal.get_value()
-        factDict[fTermId] = [myvals, 'B-Event']
+        factDict[fTermId] = [myvals, 'B-EVENT']
         otherTerms = eventDict.get(fTermId)
         if otherTerms:
             for t in otherTerms:
-                factDict[t] = [myvals, 'I-Event']
+                factDict[t] = [myvals, 'I-EVENT']
     return factDict
 
 
@@ -59,7 +78,8 @@ def create_conll_out(nafobj):
     '''
     Takes nafobj as input and prints out a conll style file with events and their factuality marked
     '''
-    myevents = create_event_dict(nafobj)
+    content = ""
+    myevents = create_event_pred_dict(nafobj)
     myfactualities = get_event_factuality_info(nafobj, myevents)
     for term in nafobj.get_terms():
         termId = term.get_id()
@@ -70,16 +90,18 @@ def create_conll_out(nafobj):
             values = create_values(myfactualities.get(termId))
         else:
             values = 'O\tO\tO\tO'
-        print token + '\t' + termId + '\t' + values
+        
+        content += token + '\t' + termId + '\t' + values + '\n'
 
-
-
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
+    print content
 
 
 
 def main():
 
-    inputfile = sys.stdin
+    inputfile = codecs.getreader('utf-8')(sys.stdin)
+
     nafobj = KafNafParser(inputfile)
     create_conll_out(nafobj)
 

@@ -320,6 +320,7 @@ def get_all_relation_value(element, eltName, objectEval, list_instances):
                     if rel_tmp.source == r.source and rel_tmp.target == r.target:
                         duplicate = True
 
+    
                 if not duplicate:
                     relationList.append(r)
                 #elif eltName == "TLINK": 
@@ -636,9 +637,13 @@ def compute_recall_precision_tlink_tempeval_format (gold_relationList, sys_relat
     eltName = "TLINK"
 
     correspId_inst_inv = get_inverse_array(correspId_inst)
+    
+    correspId_inv = {}
+    for k in correspId:
+        correspId_inv[correspId[k]] = k
 
     [gold_annotation_tlink, diff_rel_gold] = get_tlink_relations_tempeval_format(gold_relationList, correspId, correspId_inst, 'gold', highest_id)
-    [system_annotation_tlink, diff_rel_sys] = get_tlink_relations_tempeval_format(sys_relationList, {v:k for k, v in correspId.items()}, correspId_inst_inv, 'sys', highest_id+200) 
+    [system_annotation_tlink, diff_rel_sys] = get_tlink_relations_tempeval_format(sys_relationList, correspId_inv, correspId_inst_inv, 'sys', highest_id+200) 
 
     tg_gold, tg_system = get_timegraphs(gold_annotation_tlink, system_annotation_tlink) 
     gold_relations = get_triples(gold_annotation_tlink) 
@@ -1449,7 +1454,8 @@ def evaluate_two_files2(gold_file, system_file):
     #get instances
     instance_gold = get_instance(markables_gold)
     instance_sys = get_instance(markables_sys)
-  
+    
+    timexidList = [] 
         
     highest_id = get_highest_id(markables_gold, markables_sys)
      
@@ -1457,6 +1463,11 @@ def evaluate_two_files2(gold_file, system_file):
     for eltName in global_list_markables_att:
         gold_entity, gold_token_entity = get_all_element_value(markables_gold,eltName,global_list_markables_att[eltName],'gold',list_token_gold)
         sys_entity, sys_token_entity = get_all_element_value(markables_sys,eltName,global_list_markables_att[eltName],'sys',list_token_sys)
+
+
+        if eltName == "TIMEX3":
+            for tmx in sys_entity:
+                timexidList.append(tmx.eid)
 
         correspId_entity_inst = compute_precision_recall(gold_entity, gold_token_entity, sys_entity, sys_token_entity, global_list_markables_att[eltName], eltName) 
             
@@ -1469,17 +1480,30 @@ def evaluate_two_files2(gold_file, system_file):
         gold_rel = get_all_relation_value(relations_gold,eltName,global_list_relations_one2one_att[eltName], instance_gold)
         sys_rel = get_all_relation_value(relations_sys,eltName,global_list_relations_one2one_att[eltName], instance_sys)
 
+        sys_rel_tmx = []
+        sys_rel_tmx = list(sys_rel)
+        if "TLINK" in eltName:
+            for ind in range(len(sys_rel)-1,-1,-1):
+                if sys_rel[ind].source[0] in timexidList and sys_rel[ind].target[0] in timexidList:
+                    sys_rel.pop(ind)
+
         gold_rel_markable_match_RM = get_all_relation_value_markable_match(gold_rel,correspIdRM)
         sys_rel_markable_match_RM = get_all_relation_value_markable_match(sys_rel,get_inverse_dict(correspIdRM))
         gold_rel_markable_match = get_all_relation_value_markable_match(gold_rel,correspId)
         sys_rel_markable_match = get_all_relation_value_markable_match(sys_rel,get_inverse_dict(correspId))
+        sys_rel_tmx_markable_match = get_all_relation_value_markable_match(sys_rel_tmx,get_inverse_dict(correspId))
 
         if eltName == "TLINK":
-            compute_recall_precision_tlink_tempeval_format(gold_rel, sys_rel, correspId, correspId_inst, highest_id)
+            #compute_recall_precision_tlink_tempeval_format(gold_rel_markable_match, sys_rel_tmx_markable_match, correspId, correspId_inst, highest_id)
+            compute_recall_precision_tlink_tempeval_format(gold_rel, sys_rel_tmx, correspId, correspId_inst, highest_id)
             #else: 
         
+
+        #compute_precision_recall_relation_one2one(gold_rel_markable_match, sys_rel_markable_match, correspId, correspId_inst, global_list_relations_one2one_att[eltName], eltName, 'strict')
         compute_precision_recall_relation_one2one(gold_rel, sys_rel, correspId, correspId_inst, global_list_relations_one2one_att[eltName], eltName, 'strict')
 
+
+        #compute_precision_recall_relation_one2one(gold_rel_markable_match_RM, sys_rel_markable_match_RM, correspIdRM, correspId_inst, global_list_relations_one2one_att[eltName], eltName, 'relaxed')
         compute_precision_recall_relation_one2one(gold_rel, sys_rel, correspIdRM, correspId_inst, global_list_relations_one2one_att[eltName], eltName, 'relaxed')
 
     return '' 

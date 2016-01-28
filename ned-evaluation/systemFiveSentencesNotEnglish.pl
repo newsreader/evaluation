@@ -10,7 +10,7 @@ my $resource = $ARGV[1];
 my $out = $ARGV[2];
 
 my $f = $ARGV[4]."mappings_sys.csv";
-open(F,$f) or die "can't open $f\n";
+open(F,"<:encoding(UTF-8)",$f) or die "can't open $f\n";
 my @lines = <F>;
 close(F);
 
@@ -21,13 +21,13 @@ foreach my $l (@lines){
     $mappings{$info[0]} = $info[1];
 }
 
-my $parser = XML::LibXML->new();
+my $parser = XML::LibXML->new("1.0", "UTF-8");
 
 opendir(my $dh, $sys) || die "can't opendir $sys: $!";
 my @docs = readdir($dh);
 closedir $dh;
 
-open(O,">$out") or die "can't open $out file\n";
+open(O,">:encoding(UTF-8)", $out) or die "can't open $out file\n";
 foreach my $d (@docs){
     if ($d =~ /\.naf$/){
     #if ($d =~ /\.naf$/ or $d =~ /\.xml$/){

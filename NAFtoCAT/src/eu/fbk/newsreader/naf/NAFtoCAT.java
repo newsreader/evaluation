@@ -1,5 +1,6 @@
 package eu.fbk.newsreader.naf;
 
+import ixa.kaflib.Annotation;
 import ixa.kaflib.CLink;
 import ixa.kaflib.Coref;
 import ixa.kaflib.ExternalRef;
@@ -9,9 +10,11 @@ import ixa.kaflib.TLink;
 import ixa.kaflib.Term;
 import ixa.kaflib.Timex3;
 import ixa.kaflib.WF;
+import ixa.kaflib.KAFDocument.Layer;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
@@ -48,10 +51,17 @@ public class NAFtoCAT {
 		//BufferedReader br = new BufferedReader(new FileReader(args[0]));
 		
 		//BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-		String fileNameOut = args[1];
+		if(new File(args[0]).isDirectory()){
+			for (File f : new File(args[0]).listFiles()){
+				String fileNameOut = args[1]+f.getName()+".xml";
+				NAF2CAT(f, fileNameOut);
+			}
+		}
+		else if(new File(args[0]).isFile()){
+			String fileNameOut = args[1];
 		
-		NAF2CAT(new File(args[0]), fileNameOut);
-		
+			NAF2CAT(new File(args[0]), fileNameOut);
+		}
 		
 	}
 	
@@ -187,9 +197,17 @@ public class NAFtoCAT {
 		
 		int rid = mid+1;
 		
-		List<TLink> tl = nafFile.getTLinks();
+		List<Annotation> temprels = nafFile.getLayer(Layer.TEMPORAL_RELATIONS);
+	    List<TLink> tl = new ArrayList<TLink>();
+	    for (Annotation temprel : temprels) {
+	        if (temprel instanceof TLink) {
+	          tl.add((TLink) temprel);
+	        }
+	    }
+	    
+		//List<TLink> tl = nafFile.getTLinks();
 		if(tl != null){
-			ListIterator<TLink> tlinkL = nafFile.getTLinks().listIterator();
+			ListIterator<TLink> tlinkL = tl.listIterator();
 			
 			while(tlinkL.hasNext()){
 				TLink tlink = tlinkL.next();

@@ -1,6 +1,22 @@
 EVALUATION PACKAGE - NEWSREADER
 ===============================
 
+Copyright 2016 FBK, EHU, VUA
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+==============================
+
 Each folder contains the materials for evaluating one module of the pipeline as well as a README with contact information.
 
 Author: FBK, EHU, VUA
@@ -57,3 +73,21 @@ In order to run the evaluation for Dutch, Spanish and Italian:
 And copy the intra-doc files (annotated with CAT) into gold_dutch/gold_CAT/ and the cross-doc files (annotated with CROMER) into gold_dutch/gold_CROMER/.
 
 The gold standard files can be downloaded from the newsreader website: http://www.newsreader-project.eu/results/data/wikinews
+
+
+Installation:
+> git clone https://github.com/newsreader/evaluation
+
+> cd evaluation/
+
+NERC scorer: 
+> wget http://www.cnts.ua.ac.be/conll2000/chunking/conlleval.txt nerc-evaluation/
+> mv nerc-evaluation/conlleval.txt nerc-evaluation/conlleval.pl
+
+Temporal Relation evaluation:
+> git clone git@github.com:naushadzaman/tempeval3_toolkit.git
+> cp tempeval3_toolkit/evaluation-relations/relation_to_timegraph.py* scorer_CAT_event_timex_rel/
+> cp tempeval3_toolkit/evaluation-relations/* tempeval3_toolkit/timeline-evaluation/
+
+SRL scorer:
+> wget http://ufal.mff.cuni.cz/conll2009-st/eval09.pl srl-evaluation/
